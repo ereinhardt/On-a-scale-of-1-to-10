@@ -113,9 +113,23 @@ export default class Scene {
     }
 
     
+    calculateHorizontalRotationY() {
+        this.horizontalRotationY = Math.atan2(
+            this.left_eye.z - this.right_eye.z, 
+            this.left_eye.x - this.right_eye.x
+        )
+
+    }
 
 
-   
+    calculateHorizontalRotationZ() {
+
+        this.horizontalRotationZ = Math.atan2(
+            this.left_eye.y - this.right_eye.y, 
+            this.left_eye.x - this.right_eye.x
+        )
+
+    }
 
 
 async animate() {
@@ -128,6 +142,19 @@ async animate() {
     // Render Bounding Box
     if (this.face && this.face.length > 0) {
         const box = this.face[0].box;
+        const right_eye = this.face[0].keypoints.find((e) => e.name == "rightEye")
+        const left_eye = this.face[0].keypoints.find((e) => e.name == "leftEye")
+
+        if(left_eye) {
+            this.left_eye = new THREE.Vector3(left_eye.x, left_eye.y, left_eye.z);
+        }
+
+        if(right_eye) {
+            this.right_eye = new THREE.Vector3(right_eye.x, right_eye.y, right_eye.z);
+        }
+
+        this.calculateHorizontalRotationZ();
+        this.calculateHorizontalRotationY();
 
         const videoW = this.video_stream.videoWidth;
         const videoH = this.video_stream.videoHeight;
@@ -144,6 +171,9 @@ async animate() {
             const worldY = videoH / 2 - cy;
 
             this.bbox.scale.set(w, h, 1);
+            this.bbox.rotation.z = -this.horizontalRotationZ;
+
+
             this.bbox.position.set(worldX, worldY, 0.5);
         }
     }

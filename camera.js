@@ -15,7 +15,7 @@ async function setupCamera() {
     videoElement.id = 'camera-stream';
     await videoElement.play();
 
-    const scene = new Scene(
+    const _ = new Scene(
         videoElement
     );
 
