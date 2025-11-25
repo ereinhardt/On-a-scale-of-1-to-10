@@ -2,24 +2,31 @@ import Scene from "./scene.js";
 const CAMERA_OPTIONS = {
     video: {
         facingMode: 'user',
-        width: { ideal: window.screen.width },
-        height: { ideal: window.screen.height }
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
     },
     audio: false
 };
 
 async function setupCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
-    const videoElement = document.createElement('video');
-    videoElement.srcObject = stream;
-    videoElement.id = 'camera-stream';
-    await videoElement.play();
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
+        const videoElement = document.createElement('video');
+        videoElement.srcObject = stream;
+        videoElement.id = 'camera-stream';
+        
+        // Wichtig für iOS/Mobile: Video muss inline abspielen und stummgeschaltet sein für Autoplay
+        videoElement.setAttribute('playsinline', '');
+        videoElement.setAttribute('webkit-playsinline', '');
 
-    const _ = new Scene(
-        videoElement
-    );
+        await videoElement.play();
 
-
+        const scene = new Scene(
+            videoElement
+        );
+    } catch (error) {
+        console.error("Kamera-Fehler:", error);
+    }
 }
 
 setupCamera();

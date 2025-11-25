@@ -66,22 +66,11 @@ export default class Scene {
 
 
     createVideoPlane() {
-        //const size = calculateVideoSize();
-        const geometry = new THREE.PlaneGeometry(
-            window.screen.width,
-            window.screen.height,
-        );
+        // Wir nutzen eine 1x1 Geometrie und skalieren sie später, 
+        // damit wir flexibel auf Änderungen der Video-Auflösung reagieren können.
+        const geometry = new THREE.PlaneGeometry(1, 1);
 
-
-
-        geometry.scale(-1,1,1);
-
-        const video_texture = new THREE.VideoTexture(this.video_stream
-        );
-
-        video_texture.wrapS = THREE.RepeatWrapping;
-        video_texture.wrapT = THREE.RepeatWrapping;
-
+        const video_texture = new THREE.VideoTexture(this.video_stream);
         video_texture.colorSpace = THREE.SRGBColorSpace;
 
         const material = new THREE.MeshBasicMaterial({
@@ -90,9 +79,38 @@ export default class Scene {
         });
 
         this.video_mesh = new THREE.Mesh(geometry, material);
-        this.video_mesh.position.set(0, 0, 0);
-
         this.scene.add(this.video_mesh);
+
+        // Event-Listener für Video-Größenänderungen (z.B. bei Rotation)
+        this.video_stream.addEventListener('resize', () => this.updateVideoScale());
+
+        this.updateVideoScale();
+    }
+
+    updateVideoScale() {
+        const videoWidth = this.video_stream.videoWidth;
+        const videoHeight = this.video_stream.videoHeight;
+
+        if (videoWidth === 0 || videoHeight === 0) return;
+
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        const videoAspect = videoWidth / videoHeight;
+        const windowAspect = windowWidth / windowHeight;
+
+        // Berechne Skalierungsfaktor, um den Bildschirm zu füllen (Cover)
+        if (windowAspect > videoAspect) {
+            this.videoScale = windowWidth / videoWidth;
+        } else {
+            this.videoScale = windowHeight / videoHeight;
+        }
+
+        if (this.video_mesh) {
+            // Skaliere das 1x1 Mesh auf die Video-Größe * Skalierungsfaktor
+            // Negatives X für Spiegelung
+            this.video_mesh.scale.set(-videoWidth * this.videoScale, videoHeight * this.videoScale, 1);
+        }
     }
 
 
@@ -108,6 +126,8 @@ export default class Scene {
             this.camera.top    =  window.innerHeight / 2;
             this.camera.bottom = -window.innerHeight / 2;
             this.camera.updateProjectionMatrix();
+
+            this.updateVideoScale();
 
         });
     }
@@ -161,18 +181,19 @@ async animate() {
 
         if (videoW > 0 && videoH > 0) {
 
-            const w = box.width;
-            const h = box.height;
+            const scale = this.videoScale || 1;
 
-            const cx = box.xMin + w / 2;
-            const cy = box.yMin + h / 2;
+            const w = box.width * scale;
+            const h = box.height * scale;
 
-            const worldX = cx - videoW / 2;
-            const worldY = videoH / 2 - cy;
+            const cx = box.xMin + box.width / 2;
+            const cy = box.yMin + box.height / 2;
+
+            const worldX = (cx - videoW / 2) * scale;
+            const worldY = (videoH / 2 - cy) * scale;
 
             this.bbox.scale.set(w, h, 1);
             this.bbox.rotation.z = -this.horizontalRotationZ;
-
 
             this.bbox.position.set(worldX, worldY, 0.5);
         }
