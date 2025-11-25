@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { rotation } from './la';
 
 
 export default class Scene {
@@ -134,20 +135,12 @@ export default class Scene {
 
     
     calculateHorizontalRotationY() {
-        this.horizontalRotationY = Math.atan2(
-            this.left_eye.z - this.right_eye.z, 
-            this.left_eye.x - this.right_eye.x
-        )
-
+        this.horizontalRotationY = rotation(this.left_eye.z, this.right_eye.z, this.left_eye.x, this.right_eye.x);
     }
 
 
     calculateHorizontalRotationZ() {
-
-        this.horizontalRotationZ = Math.atan2(
-            this.left_eye.y - this.right_eye.y, 
-            this.left_eye.x - this.right_eye.x
-        )
+        this.horizontalRotationZ = rotation(this.left_eye.y, this.right_eye.y, this.left_eye.x, this.right_eye.x);
 
     }
 
