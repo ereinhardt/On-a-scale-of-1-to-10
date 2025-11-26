@@ -1,197 +1,298 @@
 import * as THREE from 'three';
-import { rotation } from './la';
-
+import { rotation } from './la.js';
 
 export default class Scene {
     constructor(video_stream) {
         this.video_stream = video_stream;
         this.initFaceDetection();
 
-        // --- SCENE ---
         this.scene = new THREE.Scene();
+        this.first_render = true;
 
-        // --- CAMERA ---
-        this.camera = new THREE.OrthographicCamera(
-            -window.innerWidth / 2,
-             window.innerWidth / 2,
-             window.innerHeight / 2,
-            -window.innerHeight / 2,
-             0.001,
-             2000
-        );
-        this.camera.position.z = 1;
+        // ------------------------------------
+        //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
+        // ------------------------------------
+        this.createOrthoCamera();
 
-        // --- RENDERER ---
+        // ------------------------------------
+        //  CAMERA 2: PERSPECTIVE (3D rotation)
+        // ------------------------------------
+        this.createPerspectiveCamera();
+
+        // RENDERER
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.domElement.id = "scene";
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        
         document.body.appendChild(this.renderer.domElement);
 
-        // --- VIDEO PLANE ---
+        // VIDEO + UI-Layer (Layer 0)
         this.createVideoPlane();
+        this.updateVideoScale();
 
         this.createBoundingBox();
 
-        // --- RESIZE HANDLING ---
+        // 3D-Layer (Layer 1)
+        this.create3DObjects();
+
         this.enableResponsive();
 
-        // --- START LOOP ---
         this.renderer.setAnimationLoop(this.animate.bind(this));
     }
 
+    // ============= FACE MESH INIT =============
     async initFaceDetection() {
-
         const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-        const detectorConfig = {
-        runtime: 'mediapipe', // or 'tfjs'
-        solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
-        }
-        this.detector = await faceLandmarksDetection.createDetector(model, detectorConfig);
+        const config = {
+            runtime: 'mediapipe',
+            solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
+        };
+        this.detector = await faceLandmarksDetection.createDetector(model, config);
     }
 
-    createBoundingBox() {
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    const material = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        transparent: true,
-        opacity: 0.7,
-        side: THREE.DoubleSide
-    });
+    // ===========================================
+    // 1) ORTHO CAMERA – EXAKT SCREENBREITE/HÖHE
+    // ===========================================
+    createOrthoCamera() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
-    this.bbox = new THREE.Mesh(geometry, material);
-    this.bbox.position.z = 0.5; // über dem Video
+        this.orthoCam = new THREE.OrthographicCamera(
+            -w / 2, w / 2,
+             h / 2, -h / 2,
+            -10, 10
+        );
 
-    this.scene.add(this.bbox);
-}
+        this.orthoCam.position.z = 2;
+        this.orthoCam.layers.enable(0); // Layer0 = Video/UI
+    }
 
+    // ===========================================
+    // 2) PERSPECTIVE CAMERA – 3D FACE ROTATION
+    // ===========================================
+    createPerspectiveCamera() {
+        this.perspCam = new THREE.PerspectiveCamera(
+            40,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            500
+        );
 
+        this.perspCam.position.set(0, 0, 50);
+        this.perspCam.lookAt(0, 0, 0);
+        this.perspCam.layers.enable(1); // Layer1 = 3D Rotation-Objects
+    }
+
+    // =======================
+    // VIDEO PLANE (Layer 0)
+    // =======================
     createVideoPlane() {
-        // Wir nutzen eine 1x1 Geometrie und skalieren sie später, 
-        // damit wir flexibel auf Änderungen der Video-Auflösung reagieren können.
-        const geometry = new THREE.PlaneGeometry(1, 1);
+        const geo = new THREE.PlaneGeometry(1, 1);
+        const tex = new THREE.VideoTexture(this.video_stream);
+        tex.colorSpace = THREE.SRGBColorSpace;
 
-        const video_texture = new THREE.VideoTexture(this.video_stream);
-        video_texture.colorSpace = THREE.SRGBColorSpace;
+        const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
 
-        const material = new THREE.MeshBasicMaterial({
-            map: video_texture,
-            side: THREE.DoubleSide
-        });
+        this.video_mesh = new THREE.Mesh(geo, mat);
+        this.video_mesh.scale.set(-1, 1, 1);
+        this.video_mesh.layers.set(0);
 
-        this.video_mesh = new THREE.Mesh(geometry, material);
         this.scene.add(this.video_mesh);
-
-        // Event-Listener für Video-Größenänderungen (z.B. bei Rotation)
-        this.video_stream.addEventListener('resize', () => this.updateVideoScale());
-
-        this.updateVideoScale();
     }
 
     updateVideoScale() {
-        const videoWidth = this.video_stream.videoWidth;
-        const videoHeight = this.video_stream.videoHeight;
+        const vw = this.video_stream.videoWidth;
+        const vh = this.video_stream.videoHeight;
+        if (!vw || !vh) return;
 
-        if (videoWidth === 0 || videoHeight === 0) return;
+        const sw = window.innerWidth;
+        const sh = window.innerHeight;
 
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
+        const videoAspect = vw / vh;
+        const screenAspect = sw / sh;
 
-        const videoAspect = videoWidth / videoHeight;
-        const windowAspect = windowWidth / windowHeight;
+        let rw, rh;
 
-        // Berechne Skalierungsfaktor, um den Bildschirm zu füllen (Cover)
-        if (windowAspect > videoAspect) {
-            this.videoScale = windowWidth / videoWidth;
+        if (screenAspect > videoAspect) {
+            rw = sw;
+            rh = sw / videoAspect;
         } else {
-            this.videoScale = windowHeight / videoHeight;
+            rh = sh;
+            rw = sh * videoAspect;
         }
 
-        if (this.video_mesh) {
-            // Skaliere das 1x1 Mesh auf die Video-Größe * Skalierungsfaktor
-            // Negatives X für Spiegelung
-            this.video_mesh.scale.set(-videoWidth * this.videoScale, videoHeight * this.videoScale, 1);
-        }
+        this.video_mesh.scale.set(-rw, rh, 1);
+        this.videoScale = rw / vw;
     }
 
+    // ==========================
+    // BOUNDING BOX (Layer 0)
+    // ==========================
+    createBoundingBox() {
+        const geo = new THREE.PlaneGeometry(1, 1);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.5
+        });
 
+        this.bbox = new THREE.Mesh(geo, mat);
+        this.bbox.position.z = 1; 
+        this.bbox.layers.set(0);
+
+        //this.scene.add(this.bbox);
+    }
+
+    // =======================================
+    // OPTIONAL: Beispiel-3D-Objekt (Layer 1)
+    // =======================================
+    create3DObjects() {
+        const geo = new THREE.PlaneGeometry(5, 10);
+        const mat = new THREE.MeshNormalMaterial();
+        this.box3D = new THREE.Mesh(geo, mat)
+
+        this.box3D.position.y = 10;
+        
+
+        this.box3D.layers.set(1);
+        this.scene.add(this.box3D);
+    }
+
+    // ==================
+    // RESPONSIVE
+    // ==================
     enableResponsive() {
         window.addEventListener("resize", () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
 
-            // Renderer
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setSize(w, h);
 
-            // Camera
-            this.camera.left   = -window.innerWidth / 2;
-            this.camera.right  =  window.innerWidth / 2;
-            this.camera.top    =  window.innerHeight / 2;
-            this.camera.bottom = -window.innerHeight / 2;
-            this.camera.updateProjectionMatrix();
+            // ORTHO CAM UPDATES
+            this.orthoCam.left   = -w / 2;
+            this.orthoCam.right  =  w / 2;
+            this.orthoCam.top    =  h / 2;
+            this.orthoCam.bottom = -h / 2;
+            this.orthoCam.updateProjectionMatrix();
+
+            // PERSPECTIVE CAM UPDATES
+            this.perspCam.aspect = w / h;
+            this.perspCam.updateProjectionMatrix();
 
             this.updateVideoScale();
-
         });
     }
 
-    
-    calculateHorizontalRotationY() {
-        this.horizontalRotationY = rotation(this.left_eye.z, this.right_eye.z, this.left_eye.x, this.right_eye.x);
+    screenToWorldSpace(point) {
+         // 1. Normalisierte Device-Koordinaten (-1..1)
+        const ndcX = (point.x / renderer.domElement.clientWidth) * 2 - 1;
+        const ndcY = - (point.y / renderer.domElement.clientHeight) * 2 + 1;
+
+    // 2. Erstelle Vektor mit NDC
+    const vec = new THREE.Vector3(ndcX, ndcY, 0.5); // z=0.5 mittig
+    vec.unproject(camera);
+
+    if (camera.isOrthographicCamera) {
+        // Bei Ortho: unproject liefert direkt World-Koordinaten
+        return vec;
+    } else if (camera.isPerspectiveCamera) {
+        // Bei Perspective: Raycast von Kamera durch das Pixel
+        const dir = vec.sub(camera.position).normalize();
+        const distance = (depthZ - camera.position.z) / dir.z;
+        return camera.position.clone().add(dir.multiplyScalar(distance));
     }
 
-
-    calculateHorizontalRotationZ() {
-        this.horizontalRotationZ = rotation(this.left_eye.y, this.right_eye.y, this.left_eye.x, this.right_eye.x);
-
+    return vec;
     }
 
+    // ==================
+    // ANIMATE
+    // ==================
+    async animate() {
+        this.renderer.autoClear = false;
+        this.renderer.clear();      
 
-async animate() {
 
-    if(this.detector) {
-        const options = {maxFaces: 1, flipHorizontal: true};
-        this.face = await this.detector.estimateFaces(this.video_stream, options);
-    }
-
-    // Render Bounding Box
-    if (this.face && this.face.length > 0) {
-        const box = this.face[0].box;
-        const right_eye = this.face[0].keypoints.find((e) => e.name == "rightEye")
-        const left_eye = this.face[0].keypoints.find((e) => e.name == "leftEye")
-
-        if(left_eye) {
-            this.left_eye = new THREE.Vector3(left_eye.x, left_eye.y, left_eye.z);
+        // === FACE MESH ===
+        if (this.detector) {
+            const options = { maxFaces: 1, flipHorizontal: true };
+            this.face = await this.detector.estimateFaces(this.video_stream, options);
         }
 
-        if(right_eye) {
-            this.right_eye = new THREE.Vector3(right_eye.x, right_eye.y, right_eye.z);
+        // === UPDATE BOUNDING BOX ===
+        if (this.face && this.face.length) {
+            const f = this.face[0];
+            const box = f.box;
+
+            const vw = this.video_stream.videoWidth;
+            const vh = this.video_stream.videoHeight;
+
+            const scale = this.videoScale;
+            if (vw && vh && scale) {
+
+                const w = box.width * scale;
+                const h = box.height * scale;
+
+                const cx = box.xMin + box.width / 2;
+                const cy = box.yMin + box.height / 2;
+
+                const x = (cx - vw / 2) * scale;
+                const y = (vh / 2 - cy) * scale;
+
+                this.bbox.scale.set(w, h, 1);
+                this.bbox.position.set(x, y, 1);
+            }
+
+            // === UPDATE 3D ROTATION ===
+            const leftEye  = f.keypoints.find(e => e.name === "leftEyebrow");
+            const rightEye = f.keypoints.find(e => e.name === "rightEyebrow");
+            const chin     = f.keypoints[152]
+
+            if(this.first_render) console.log(f);
+            this.first_render = false;
+
+
+            if (leftEye && rightEye && chin) {
+
+                const eyeCenter = {
+                    x: (leftEye.x + rightEye.x) / 2,
+                    y: (leftEye.y + rightEye.y) / 2,
+                    z: (leftEye.z + rightEye.z) / 2
+                };
+
+                const rotY = rotation(leftEye.z, rightEye.z, leftEye.x, rightEye.x); // Yaw
+                const rotZ = rotation(leftEye.y, rightEye.y, leftEye.x, rightEye.x); // Roll
+                const rotX = rotation(
+                    f.keypoints[152].z,
+                    f.keypoints[10].z, 
+                    f.keypoints[152].y, 
+                    f.keypoints[10].y, 
+                );     // Pitch ✔️
+                
+                console.log(rotX);
+
+                this.box3D.rotation.y = rotY;
+                this.box3D.rotation.z = -rotZ;
+                this.box3D.rotation.x =  rotX;
+            }
+
+
+
         }
 
-        this.calculateHorizontalRotationZ();
-        this.calculateHorizontalRotationY();
 
-        const videoW = this.video_stream.videoWidth;
-        const videoH = this.video_stream.videoHeight;
 
-        if (videoW > 0 && videoH > 0) {
+        // ==============================
+        // RENDER PASS 1: Video/UI (Layer 0)
+        // ==============================
+        this.orthoCam.layers.set(0);
+        this.renderer.render(this.scene, this.orthoCam);
 
-            const scale = this.videoScale || 1;
+        this.renderer.clearDepth();
 
-            const w = box.width * scale;
-            const h = box.height * scale;
+        // ==============================
+        // RENDER PASS 2: 3D Objects (Layer 1)
+        // ==============================
+        this.perspCam.layers.set(1);
+        this.renderer.render(this.scene, this.perspCam);
 
-            const cx = box.xMin + box.width / 2;
-            const cy = box.yMin + box.height / 2;
-
-            const worldX = (cx - videoW / 2) * scale;
-            const worldY = (videoH / 2 - cy) * scale;
-
-            this.bbox.scale.set(w, h, 1);
-            this.bbox.rotation.z = -this.horizontalRotationZ;
-
-            this.bbox.position.set(worldX, worldY, 0.5);
-        }
     }
-
-    this.renderer.render(this.scene, this.camera);
-}
 }
