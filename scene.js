@@ -25,6 +25,8 @@ export default class Scene {
     this.filterRotY = new OneEuroFilter(minCutoff, beta);
     this.filterRotZ = new OneEuroFilter(minCutoff, beta);
 
+    this.lastFaceDetectedTime = 0;
+
     // ====================================
     //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
     // ====================================
@@ -381,12 +383,20 @@ export default class Scene {
       this.face = await this.detector.estimateFaces(this.video_stream, options);
     }
 
-    if (!this.face || !this.face.length) {
-      if (this.headAnchor) this.headAnchor.position.z = -10000;
+    const faceFound = this.face && this.face.length > 0;
+
+    if (faceFound) {
+      this.lastFaceDetectedTime = time;
+      if (this.headAnchor) this.headAnchor.visible = true;
+    } else {
+      // Prevent flickering: Keep showing for 200ms after loss
+      if (time - this.lastFaceDetectedTime > 200) {
+        if (this.headAnchor) this.headAnchor.visible = false;
+      }
     }
 
     // Update Bounding Box
-    if (this.face && this.face.length) {
+    if (faceFound) {
       const f = this.face[0];
       const box = f.box;
 
