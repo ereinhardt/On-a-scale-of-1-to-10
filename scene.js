@@ -1,261 +1,322 @@
-import * as THREE from 'three';
-import { rotation, roundWithPrecision } from './la.js';
+import * as THREE from "three";
+import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
 
 const REAL_IPD = 0.063; // 6.3 cm
 
 export default class Scene {
-    constructor(video_stream) {
-        this.video_stream = video_stream;
-        this.initFaceDetection();
+  constructor(video_stream) {
+    this.video_stream = video_stream;
+    this.initFaceDetection();
 
-        this.scene = new THREE.Scene();
-        this.first_render = true;
-        this._smoothPos = new THREE.Vector3(0, 0, 0); 
+    this.scene = new THREE.Scene();
+    this.first_render = true;
 
-        // ------------------------------------
-        //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
-        // ------------------------------------
-        this.createOrthoCamera();
+    // Initialize OneEuroFilters
+    // minCutoff: lower = smoother when slow (less jitter)
+    // beta: higher = faster response when moving (less lag)
+    const minCutoff = 0.001;
+    const beta = 3.0;
 
-        // ------------------------------------
-        //  CAMERA 2: PERSPECTIVE (3D rotation)
-        // ------------------------------------
-        this.createPerspectiveCamera();
+    this.filterX = new OneEuroFilter(minCutoff, beta);
+    this.filterY = new OneEuroFilter(minCutoff, beta);
+    this.filterZ = new OneEuroFilter(minCutoff, beta);
 
-        // RENDERER
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(this.renderer.domElement);
+    this.filterRotX = new OneEuroFilter(minCutoff, beta);
+    this.filterRotY = new OneEuroFilter(minCutoff, beta);
+    this.filterRotZ = new OneEuroFilter(minCutoff, beta);
 
-        // VIDEO + UI-Layer (Layer 0)
-        this.createVideoPlane();
-        this.updateVideoScale();
+    // ====================================
+    //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
+    // ====================================
+    this.createOrthoCamera();
 
-        this.createBoundingBox();
+    // ====================================
+    //  CAMERA 2: PERSPECTIVE (3D rotation)
+    // ====================================
+    this.createPerspectiveCamera();
 
-        // 3D-Layer (Layer 1)
-        this.create3DObjects();
+    // RENDERER
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(this.renderer.domElement);
 
-        this.enableResponsive();
+    // VIDEO + UI-Layer (Layer 0)
+    this.createVideoPlane();
+    this.updateVideoScale();
 
-        this.renderer.setAnimationLoop(this.animate.bind(this));
+    this.createBoundingBox();
+
+    // 3D-Layer (Layer 1)
+    this.create3DObjects();
+
+    // this.enableResponsive(); // Removed in favor of checkResize in animate
+
+    this.renderer.setAnimationLoop(this.animate.bind(this));
+  }
+
+  // FACE MESH INIT
+  async initFaceDetection() {
+    const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+    const config = {
+      runtime: "mediapipe",
+      solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
+    };
+    this.detector = await faceLandmarksDetection.createDetector(model, config);
+  }
+
+  // ===========================================
+  // 1) ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
+  // ===========================================
+  createOrthoCamera() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    this.orthoCam = new THREE.OrthographicCamera(
+      -w / 2,
+      w / 2,
+      h / 2,
+      -h / 2,
+      -10,
+      10
+    );
+
+    this.orthoCam.position.z = 2;
+    this.orthoCam.layers.enable(0); // Layer0 = Video/UI
+  }
+
+  // ===========================================
+  // 2) PERSPECTIVE CAMERA – 3D FACE ROTATION
+  // ===========================================
+  createPerspectiveCamera() {
+    this.perspCam = new THREE.PerspectiveCamera(
+      40,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      500
+    );
+
+    this.perspCam.position.set(0, 0, 50);
+    this.perspCam.lookAt(0, 0, 0);
+    this.perspCam.layers.enable(1); // Layer1 = 3D Rotation-Objects
+  }
+
+  // =======================
+  // VIDEO PLANE (Layer 0)
+  // =======================
+  createVideoPlane() {
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const tex = new THREE.VideoTexture(this.video_stream);
+    tex.colorSpace = THREE.SRGBColorSpace;
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.DoubleSide,
+    });
+
+    this.video_mesh = new THREE.Mesh(geo, mat);
+    this.video_mesh.scale.set(-1, 1, 1);
+    this.video_mesh.layers.set(0);
+
+    this.scene.add(this.video_mesh);
+  }
+
+  updateVideoScale() {
+    const vw = this.video_stream.videoWidth;
+    const vh = this.video_stream.videoHeight;
+    if (!vw || !vh) return;
+
+    const sw = window.innerWidth;
+    const sh = window.innerHeight;
+
+    const videoAspect = vw / vh;
+    const screenAspect = sw / sh;
+
+    let scaledW, scaledH;
+
+    if (screenAspect > videoAspect) {
+      // screen is wider → match width
+      scaledW = sw;
+      scaledH = sw / videoAspect;
+    } else {
+      // screen is taller → match height
+      scaledH = sh;
+      scaledW = sh * videoAspect;
     }
 
-    // ============= FACE MESH INIT =============
-    async initFaceDetection() {
-        const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-        const config = {
-            runtime: 'mediapipe',
-            solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
-        };
-        this.detector = await faceLandmarksDetection.createDetector(model, config);
+    // In ortho we use pixel units: set plane size to scaledW x scaledH.
+    // Mirror horizontally to match webcam mirror.
+    this.video_mesh.scale.set(-scaledW, scaledH, 1);
+
+    // Keep track for coordinate conversion
+    this._videoScaledW = Math.abs(scaledW);
+    this._videoScaledH = scaledH;
+    this._videoLeft = (sw - this._videoScaledW) / 2;
+    this._videoTop = (sh - this._videoScaledH) / 2;
+
+    // store ratio for mapping video pixels to scaled pixels
+    this.videoScale = this._videoScaledW / vw;
+
+    // Adjust Perspective Camera FOV to match Video Zoom
+    // This ensures 3D objects stay in proportion to the video background
+    // regardless of cropping (Mobile vs Desktop).
+    const videoZoom = scaledH / sh;
+    const SENSOR_FOV = 65; // FOV of the short side of the sensor
+
+    let baseFovRad;
+    if (vh < vw) {
+      // Landscape video: Vertical is short side
+      baseFovRad = (SENSOR_FOV * Math.PI) / 180;
+    } else {
+      // Portrait video: Vertical is long side
+      // tan(long/2) = tan(short/2) * (long/short)
+      const aspect = vh / vw;
+      const shortFovRad = (SENSOR_FOV * Math.PI) / 180;
+      baseFovRad = 2 * Math.atan(Math.tan(shortFovRad / 2) * aspect);
     }
 
-    // ===========================================
-    // 1) ORTHO CAMERA – EXAKT SCREENBREITE/HÖHE
-    // ===========================================
-    createOrthoCamera() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+    // Calculate new vertical FOV based on zoom
+    // tan(newFOV/2) = tan(baseFOV/2) / zoom
+    const newFovRad = 2 * Math.atan(Math.tan(baseFovRad / 2) / videoZoom);
+    const newFovDeg = (newFovRad * 180) / Math.PI;
 
-        this.orthoCam = new THREE.OrthographicCamera(
-            -w / 2, w / 2,
-             h / 2, -h / 2,
-            -10, 10
-        );
+    this.perspCam.fov = newFovDeg;
+    this.perspCam.updateProjectionMatrix();
+  }
 
-        this.orthoCam.position.z = 2;
-        this.orthoCam.layers.enable(0); // Layer0 = Video/UI
+  // ==========================
+  // BOUNDING BOX (Layer 0)
+  // ==========================
+  createBoundingBox() {
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.5,
+    });
+
+    this.bbox = new THREE.Mesh(geo, mat);
+    this.bbox.position.z = 1;
+    this.bbox.layers.set(0);
+
+    //this.scene.add(this.bbox);
+  }
+
+  // =======================================
+  // OPTIONAL: Example 3D Object (Layer 1)
+  // =======================================
+  create3DObjects() {
+    // Container for the head tracking (Anchor at forehead)
+    this.headAnchor = new THREE.Group();
+    this.headAnchor.layers.set(1);
+    this.scene.add(this.headAnchor);
+
+    const geo = new THREE.PlaneGeometry(5, 5);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    this.box3D = new THREE.Mesh(geo, mat);
+
+    // Offset relative to forehead (Anchor)
+    // Moves the plane UP relative to the head orientation
+    this.box3D.position.set(0, 5, 0);
+
+    this.box3D.layers.set(1);
+    this.headAnchor.add(this.box3D);
+  }
+
+  // ==================
+  // RESPONSIVE
+  // ==================
+  checkResize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const vw = this.video_stream.videoWidth;
+    const vh = this.video_stream.videoHeight;
+
+    // Check if window size OR video size has changed
+    if (
+      w !== this._lastW ||
+      h !== this._lastH ||
+      vw !== this._lastVW ||
+      vh !== this._lastVH
+    ) {
+      this._lastW = w;
+      this._lastH = h;
+      this._lastVW = vw;
+      this._lastVH = vh;
+
+      this.renderer.setSize(w, h);
+
+      // ORTHO CAM UPDATES
+      this.orthoCam.left = -w / 2;
+      this.orthoCam.right = w / 2;
+      this.orthoCam.top = h / 2;
+      this.orthoCam.bottom = -h / 2;
+      this.orthoCam.updateProjectionMatrix();
+
+      // PERSPECTIVE CAM UPDATES
+      this.perspCam.aspect = w / h;
+      this.perspCam.updateProjectionMatrix();
+
+      this.updateVideoScale();
     }
+  }
 
-    // ===========================================
-    // 2) PERSPECTIVE CAMERA – 3D FACE ROTATION
-    // ===========================================
-    createPerspectiveCamera() {
-        this.perspCam = new THREE.PerspectiveCamera(
-            40,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            500
-        );
+  // map video pixel coords (px,py) -> canvas pixel coords
+  videoPixelToCanvasPixel(px, py) {
+    // px,py are in video pixel space (0..videoWidth, 0..videoHeight)
+    const vw = this.video_stream.videoWidth;
+    const vh = this.video_stream.videoHeight;
+    if (!vw || !vh || !this._videoScaledW) return { x: 0, y: 0 };
 
-        this.perspCam.position.set(0, 0, 50);
-        this.perspCam.lookAt(0, 0, 0);
-        this.perspCam.layers.enable(1); // Layer1 = 3D Rotation-Objects
-    }
+    // px proportion within video
+    const nx = px / vw;
+    const ny = py / vh;
 
-    // =======================
-    // VIDEO PLANE (Layer 0)
-    // =======================
-    createVideoPlane() {
-        const geo = new THREE.PlaneGeometry(1, 1);
-        const tex = new THREE.VideoTexture(this.video_stream);
-        tex.colorSpace = THREE.SRGBColorSpace;
+    // canvas position (top-left origin)
+    const cx = this._videoLeft + nx * this._videoScaledW;
+    const cy = this._videoTop + ny * this._videoScaledH;
 
-        const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
+    return { x: cx, y: cy };
+  }
 
-        this.video_mesh = new THREE.Mesh(geo, mat);
-        this.video_mesh.scale.set(-1, 1, 1);
-        this.video_mesh.layers.set(0);
+  // map canvas pixel -> world point along camera ray, at a given distance from camera 
+  screenPixelToWorldAtDistance(canvasX, canvasY, camera) {
+    // NDC
+    const ndc = new THREE.Vector3(
+      (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
+      -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
+      -1
+    );
 
-        this.scene.add(this.video_mesh);
-    }
+    // point on near-mid plane in world coords
+    const worldPoint = ndc.unproject(camera);
 
-   updateVideoScale() {
-        const vw = this.video_stream.videoWidth;
-        const vh = this.video_stream.videoHeight;
-        if (!vw || !vh) return;
+    return worldPoint;
+  }
 
-        const sw = window.innerWidth;
-        const sh = window.innerHeight;
+  screenToWorldAtZ(canvasX, canvasY, camera, targetZ) {
+    const mouse = new THREE.Vector2(
+      (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
+      -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1
+    );
 
-        const videoAspect = vw / vh;
-        const screenAspect = sw / sh;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
 
-        let scaledW, scaledH;
+    // Ray: origin + dir * t
+    const origin = raycaster.ray.origin;
+    const dir = raycaster.ray.direction;
 
-        if (screenAspect > videoAspect) {
-            // screen is wider → match width
-            scaledW = sw;
-            scaledH = sw / videoAspect;
-        } else {
-            // screen is taller → match height
-            scaledH = sh;
-            scaledW = sh * videoAspect;
-        }
+    const t = (targetZ - origin.z) / dir.z;
 
-        // In ortho we use pixel units: set plane size to scaledW x scaledH.
-        // Mirror horizontally to match webcam mirror.
-        this.video_mesh.scale.set(-scaledW, scaledH, 1);
+    return origin.clone().add(dir.multiplyScalar(t));
+  }
 
-        // Keep track for coordinate conversion
-        this._videoScaledW = Math.abs(scaledW);
-        this._videoScaledH = scaledH;
-        this._videoLeft = (sw - this._videoScaledW) / 2;
-        this._videoTop  = (sh - this._videoScaledH) / 2;
+  getFocalLengthPixels(videoWidth, fovDeg) {
+    return videoWidth / 2 / Math.tan((fovDeg * Math.PI) / 180 / 2);
+  }
 
-        // store ratio for mapping video pixels to scaled pixels
-        this.videoScale = this._videoScaledW / vw;
-    }
-
-
-    // ==========================
-    // BOUNDING BOX (Layer 0)
-    // ==========================
-    createBoundingBox() {
-        const geo = new THREE.PlaneGeometry(1, 1);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0xff0000,
-            transparent: true,
-            opacity: 0.5
-        });
-
-        this.bbox = new THREE.Mesh(geo, mat);
-        this.bbox.position.z = 1; 
-        this.bbox.layers.set(0);
-
-        //this.scene.add(this.bbox);
-    }
-
-    // =======================================
-    // OPTIONAL: Beispiel-3D-Objekt (Layer 1)
-    // =======================================
-    create3DObjects() {
-        const geo = new THREE.PlaneGeometry(5, 5);
-        const mat = new THREE.MeshBasicMaterial({color: 0xffffff});
-        this.box3D = new THREE.Mesh(geo, mat)
-
-        this.box3D.position.y = 10;
-        
-
-        this.box3D.layers.set(1);
-        this.scene.add(this.box3D);
-    }
-
-    // ==================
-    // RESPONSIVE
-    // ==================
-    enableResponsive() {
-        window.addEventListener("resize", () => {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-
-            this.renderer.setSize(w, h);
-
-            // ORTHO CAM UPDATES
-            this.orthoCam.left   = -w / 2;
-            this.orthoCam.right  =  w / 2;
-            this.orthoCam.top    =  h / 2;
-            this.orthoCam.bottom = -h / 2;
-            this.orthoCam.updateProjectionMatrix();
-
-            // PERSPECTIVE CAM UPDATES
-            this.perspCam.aspect = w / h;
-            this.perspCam.updateProjectionMatrix();
-
-            this.updateVideoScale();
-        });
-    }
-
-
-// ----- map video pixel coords (px,py) -> canvas pixel coords -----
-    videoPixelToCanvasPixel(px, py) {
-        // px,py are in video pixel space (0..videoWidth, 0..videoHeight)
-        const vw = this.video_stream.videoWidth;
-        const vh = this.video_stream.videoHeight;
-        if (!vw || !vh || !this._videoScaledW) return { x: 0, y: 0 };
-
-        // px proportion within video
-        const nx = px / vw;
-        const ny = py / vh;
-
-        // canvas position (top-left origin)
-        const cx = this._videoLeft + nx * this._videoScaledW;
-        const cy = this._videoTop  + ny * this._videoScaledH;
-
-        return { x: cx, y: cy };
-    }
-
-    // ----- map canvas pixel -> world point along camera ray, at a given distance from camera -----
-    screenPixelToWorldAtDistance(canvasX, canvasY, camera) {
-        // NDC
-        const ndc = new THREE.Vector3(
-            (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
-            -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
-            -1
-        );
-
-        // point on near-mid plane in world coords
-        const worldPoint = ndc.unproject(camera);
-
-        return worldPoint
-    }
-
-        screenToWorldAtZ(canvasX, canvasY, camera, targetZ) {
-        const mouse = new THREE.Vector2(
-            (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
-            -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1
-        );
-
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
-
-        // Ray: origin + dir * t
-        const origin = raycaster.ray.origin;
-        const dir = raycaster.ray.direction;
-
-        const t = (targetZ - origin.z) / dir.z;
-
-        return origin.clone().add(dir.multiplyScalar(t));
-    }
-
-
-getFocalLengthPixels(videoWidth, fovDeg) {
-    return (videoWidth / 2) / Math.tan((fovDeg * Math.PI / 180) / 2);
-}
-
-// Abstand zwischen den Augen in Pixeln (FaceMesh Keypoints)
-getEyePixelDistance(f) {
+  // Distance between eyes in pixels (FaceMesh Keypoints)
+  getEyePixelDistance(f) {
     // FaceMesh landmarks:
     // 33 = left eye outer corner
     // 263 = right eye outer corner
@@ -266,155 +327,159 @@ getEyePixelDistance(f) {
     const dx = L.x - R.x;
     const dy = L.y - R.y;
 
-    return Math.sqrt(dx*dx + dy*dy);
-}
+    return Math.sqrt(dx * dx + dy * dy);
+  }
 
-// Hauptfunktion: berechnet Tiefe in Metern
-computeRealDepthFromEyes(f) {
-    const videoWidth = this.video_stream.videoWidth;
-    const fov = 65; // typisches Webcam-FOV, kann kalibriert werden
+  // Main function: computes depth in meters
+  computeRealDepthFromEyes(f, yaw = 0) {
+    const vw = this.video_stream.videoWidth;
+    const vh = this.video_stream.videoHeight;
+    const fov = 65; // typical Webcam-FOV (Short Side)
 
-    const f_px = this.getFocalLengthPixels(videoWidth, fov);
+    // Use short side for consistent focal length (sensor vertical FOV)
+    const shortSide = Math.min(vw, vh);
+    const f_px = this.getFocalLengthPixels(shortSide, fov);
 
     const eyePx = this.getEyePixelDistance(f);
 
     if (eyePx < 1) return null;
 
-    // Perspektivische Tiefenformel
-    const distanceMeters = (REAL_IPD * f_px) / eyePx;
+    // Correct for head rotation (Yaw)
+    // When head turns, projected eye distance shrinks by cos(yaw).
+    // We want the "frontal" distance to estimate true depth.
+    // Limit yaw to avoid division by zero or extreme values (e.g. max 60 degrees)
+    const maxAngle = 60 * (Math.PI / 180);
+    const clampedYaw = Math.max(-maxAngle, Math.min(maxAngle, yaw));
+    const correctionFactor = Math.cos(clampedYaw);
+
+    // Avoid division by zero if cos is too small (shouldn't happen with clamp)
+    const correctedEyePx = eyePx / Math.max(0.1, correctionFactor);
+
+    // Perspective depth formula
+    const distanceMeters = (REAL_IPD * f_px) / correctedEyePx;
 
     return distanceMeters;
-}
-
-// Optional: mappe echte Meter in deine gewünschte Szene-Z-Tiefe
-mapDepthMetersToSceneZ(m) {
-    // Deine Kamera steht bei z = 50 → mappe Meter logisch
-    // m = 0.5m → nah, m = 1.5m → weit
+  } // Optional: map real meters to your desired scene Z-depth
+  mapDepthMetersToSceneZ(m) {
+    // Your camera is at z = 50 → map meters logically
+    // m = 0.5m → close, m = 1.5m → far
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
-}
+  }
 
+  // ==================
+  // ANIMATE
+  // ==================
+  async animate(time) {
+    this.checkResize();
 
-    // ==================
-    // ANIMATE
-    // ==================
-    async animate() {
-        this.renderer.autoClear = false;
-        this.renderer.clear();      
+    this.renderer.autoClear = false;
+    this.renderer.clear();
 
-
-        // === FACE MESH ===
-        if (this.detector) {
-            const options = { maxFaces: 1, flipHorizontal: true };
-            this.face = await this.detector.estimateFaces(this.video_stream, options);
-        }
-
-        if(!this.face || !this.face.length) {
-            this.box3D.position.z = -10000;
-
-        }
-
-
-        // === UPDATE BOUNDING BOX ===
-        if (this.face && this.face.length) {
-            const f = this.face[0];
-            const box = f.box;
-
-            const vw = this.video_stream.videoWidth;
-            const vh = this.video_stream.videoHeight;
-
-            const scale = this.videoScale;
-            if (vw && vh && scale) {
-
-                const w = box.width * scale;
-                const h = box.height * scale;
-
-                const cx = box.xMin + box.width / 2;
-                const cy = box.yMin + box.height / 2;
-
-                const x = (cx - vw / 2) * scale;
-                const y = (vh / 2 - cy) * scale;
-
-                this.bbox.scale.set(w, h, 1);
-                this.bbox.position.set(x, y, 1);
-            }
-
-            // === UPDATE 3D ROTATION ===
-            const leftEye  = f.keypoints.find(e => e.name === "leftEyebrow");
-            const rightEye = f.keypoints.find(e => e.name === "rightEyebrow");
-            const chin     = f.keypoints[152]
-            const forehead = f.keypoints[10]
-
-            if(this.first_render) console.log(f);
-            this.first_render = false;
-
-
-
-
-            if (leftEye && rightEye && chin) {
-
-
-                const rotY = rotation(leftEye.z, rightEye.z, leftEye.x, rightEye.x); // Yaw
-                const rotZ = rotation(leftEye.y, rightEye.y, leftEye.x, rightEye.x); // Roll
-                const rotX = rotation(
-                    f.keypoints[152].z,
-                    f.keypoints[10].z, 
-                    f.keypoints[152].y, 
-                    f.keypoints[10].y, 
-                );     // Pitch ✔️
-                
-
-                this.box3D.rotation.y = rotY;
-                this.box3D.rotation.z = -rotZ;
-                this.box3D.rotation.x =  rotX;
-
-                // Compute world position along perspective camera ray
-                const canvas_pixel = this.videoPixelToCanvasPixel(forehead.x, forehead.y);
-
-                            // === Depth über Eye Distance ===
-                const depthMeters = this.computeRealDepthFromEyes(f);
-
-                // mappe in SZENE-Z
-                const headZ = this.mapDepthMetersToSceneZ(depthMeters);
-
-                // Glätten (sehr wichtig)
-                this._smoothZ = this._smoothZ ?? headZ;
-                this._smoothZ = THREE.MathUtils.lerp(this._smoothZ, headZ, 0.15);
-
-            
-
-                const worldPos = this.screenToWorldAtZ(canvas_pixel.x, canvas_pixel.y, this.perspCam, this._smoothZ);
-
-
-                // optional Offset auf Y (z.B. Kopfspitze)
-                const targetPos = new THREE.Vector3(worldPos.x, worldPos.y + 2.5, this._smoothZ);
-
-                // Glätte mit Lerp (0.1–0.2 = sanft, 0.3–0.5 = schneller)
-                this._smoothPos.lerp(targetPos, 0.5);
-
-                // setze Box3D Position
-                this.box3D.position.copy(this._smoothPos);
-            
-            }
-
-
-
-        }
-
-
-
-        // ==============================
-        // RENDER PASS 1: Video/UI (Layer 0)
-        // ==============================
-        this.orthoCam.layers.set(0);
-        this.renderer.render(this.scene, this.orthoCam);
-
-        this.renderer.clearDepth();
-
-        // ==============================
-        // RENDER PASS 2: 3D Objects (Layer 1)
-        // ==============================
-        this.perspCam.layers.set(1);
-        this.renderer.render(this.scene, this.perspCam);
-
+    // Face Mesh
+    if (this.detector) {
+      const options = { maxFaces: 1, flipHorizontal: true };
+      this.face = await this.detector.estimateFaces(this.video_stream, options);
     }
+
+    if (!this.face || !this.face.length) {
+      if (this.headAnchor) this.headAnchor.position.z = -10000;
+    }
+
+    // Update Bounding Box
+    if (this.face && this.face.length) {
+      const f = this.face[0];
+      const box = f.box;
+
+      const vw = this.video_stream.videoWidth;
+      const vh = this.video_stream.videoHeight;
+
+      const scale = this.videoScale;
+      if (vw && vh && scale) {
+        const w = box.width * scale;
+        const h = box.height * scale;
+
+        const cx = box.xMin + box.width / 2;
+        const cy = box.yMin + box.height / 2;
+
+        const x = (cx - vw / 2) * scale;
+        const y = (vh / 2 - cy) * scale;
+
+        this.bbox.scale.set(w, h, 1);
+        this.bbox.position.set(x, y, 1);
+      }
+
+      // Update 3D Rotation
+      const leftEye = f.keypoints.find((e) => e.name === "leftEyebrow");
+      const rightEye = f.keypoints.find((e) => e.name === "rightEyebrow");
+      const chin = f.keypoints[152];
+      const forehead = f.keypoints[10];
+
+      this.first_render = false;
+
+      if (leftEye && rightEye && chin) {
+        const rawRotY = rotation(leftEye.z, rightEye.z, leftEye.x, rightEye.x); // Yaw
+        const rawRotZ = rotation(leftEye.y, rightEye.y, leftEye.x, rightEye.x); // Roll
+        const rawRotX = rotation(
+          f.keypoints[152].z,
+          f.keypoints[10].z,
+          f.keypoints[152].y,
+          f.keypoints[10].y
+        ); // Pitch ✔️
+
+        // Filter Rotation
+        if (this.headAnchor) {
+          this.headAnchor.rotation.y = this.filterRotY.filter(time, rawRotY);
+          this.headAnchor.rotation.z = this.filterRotZ.filter(time, -rawRotZ);
+          this.headAnchor.rotation.x = this.filterRotX.filter(time, rawRotX);
+        }
+
+        // Compute world position along perspective camera ray
+        const canvas_pixel = this.videoPixelToCanvasPixel(
+          forehead.x,
+          forehead.y
+        );
+
+        // Depth via Eye Distance
+        // Pass rawRotY to correct for head rotation
+        const depthMeters = this.computeRealDepthFromEyes(f, rawRotY);
+
+        // map to SCENE-Z
+        const headZ = this.mapDepthMetersToSceneZ(depthMeters);
+
+        // Filter Z (Depth)
+        const smoothZ = this.filterZ.filter(time, headZ);
+
+        const worldPos = this.screenToWorldAtZ(
+          canvas_pixel.x,
+          canvas_pixel.y,
+          this.perspCam,
+          smoothZ
+        );
+
+        // Filter Position (Anchor is at forehead)
+        const smoothX = this.filterX.filter(time, worldPos.x);
+        const smoothY = this.filterY.filter(time, worldPos.y);
+        // Z is already filtered
+
+        // set Anchor Position
+        if (this.headAnchor) {
+          this.headAnchor.position.set(smoothX, smoothY, smoothZ);
+        }
+      }
+    }
+
+    // ==============================
+    // RENDER PASS 1: Video/UI (Layer 0)
+    // ==============================
+    this.orthoCam.layers.set(0);
+    this.renderer.render(this.scene, this.orthoCam);
+
+    this.renderer.clearDepth();
+
+    // ==============================
+    // RENDER PASS 2: 3D Objects (Layer 1)
+    // ==============================
+    this.perspCam.layers.set(1);
+    this.renderer.render(this.scene, this.perspCam);
+  }
 }

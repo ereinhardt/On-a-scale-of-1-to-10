@@ -25,7 +25,7 @@ async function setupCamera() {
             videoElement
         );
     } catch (error) {
-        console.error("Kamera-Fehler:", error);
+        console.error(error);
     }
 }
 
