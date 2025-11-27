@@ -228,6 +228,10 @@ export default class Scene {
   // RESPONSIVE
   // ==================
   checkResize() {
+    if (window.visualViewport && window.visualViewport.scale > 1.01) {
+      return;
+    }
+
     const w = window.innerWidth;
     const h = window.innerHeight;
     const vw = this.video_stream.videoWidth;
