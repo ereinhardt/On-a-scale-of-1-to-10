@@ -278,7 +278,7 @@ export default class Scene {
     return { x: cx, y: cy };
   }
 
-  // map canvas pixel -> world point along camera ray, at a given distance from camera 
+  // map canvas pixel -> world point along camera ray, at a given distance from camera
   screenPixelToWorldAtDistance(canvasX, canvasY, camera) {
     // NDC
     const ndc = new THREE.Vector3(
@@ -424,7 +424,7 @@ export default class Scene {
           f.keypoints[10].z,
           f.keypoints[152].y,
           f.keypoints[10].y
-        ); // Pitch ✔️
+        ); // Pitch
 
         // Filter Rotation
         if (this.headAnchor) {
