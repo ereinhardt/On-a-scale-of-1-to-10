@@ -9,21 +9,19 @@ EXTENSION = ".json"
 def index_dir_recursive(current_path, start_dir):
     item_arr = []
 
-    if not current_path.is_dir():
-        if "DS_Store" in str(current_path):
+    if current_path.is_file():
+        if "DS_Store" in current_path.name:
             return []
+        return [str(current_path.relative_to(start_dir))]
+
+    for item in listdir(current_path):
+        item_path = current_path / item
+
+        if item_path.is_dir():
+            item_arr += index_dir_recursive(item_path, start_dir)
         else:
-            return [str(current_path.relative_to(start_dir))]
-
-    items = listdir(current_path)
-
-    for item in items:
-        item_path = pathlib.Path(item)
-        if not item_path.is_dir():
-            child_item_arr = index_dir_recursive(
-                current_path.joinpath(item_path), start_dir
-            )
-            item_arr += child_item_arr  # ass Concat operator
+            if "DS_Store" not in item_path.name:
+                item_arr.append(str(item_path.relative_to(start_dir)))
 
     return item_arr
 
