@@ -17,8 +17,19 @@ def create_scale_variations(directory):
     count = 0
     # Iterate through all files in the directory
     for filename in os.listdir(directory):
-        # Process only PNG files that match the pattern
-        if filename.lower().endswith(".png") and "__1024__8bit__" in filename:
+        # Process only PNG files
+        if filename.lower().endswith(".png"):
+            # Skip if it's already a variation (contains 512 or 256)
+            if "__512__8bit__" in filename or "__256__8bit__" in filename:
+                continue
+
+            # Determine pattern to replace
+            if "__1024__8bit__" in filename:
+                pattern = "__1024__8bit__"
+            elif "__8bit__" in filename:
+                pattern = "__8bit__"
+            else:
+                continue
             
             old_path = os.path.join(directory, filename)
             
@@ -35,7 +46,12 @@ def create_scale_variations(directory):
 
                     for size in target_sizes:
                         # Create new filename
-                        new_filename = filename.replace("__1024__8bit__", f"__{size}__8bit__")
+                        if pattern == "__1024__8bit__":
+                            new_filename = filename.replace(pattern, f"__{size}__8bit__")
+                        else:
+                            # Insert size before 8bit
+                            new_filename = filename.replace(pattern, f"__{size}__8bit__")
+
                         new_path = os.path.join(directory, new_filename)
                         
                         action = "Created"

@@ -21,7 +21,12 @@ def rename_images(directory):
             # Check if file already has a UUID prefix (contains double underscore)
             if "__" in filename:
                 # Split at the first occurrence of "__" to get the original name
-                _, original_name = filename.split("__", 1)
+                prefix, rest = filename.split("__", 1)
+                # If the prefix is '1024', treat it as part of the name, not an ID to replace
+                if prefix == "1024":
+                    original_name = filename
+                else:
+                    original_name = rest
             else:
                 original_name = filename
 
