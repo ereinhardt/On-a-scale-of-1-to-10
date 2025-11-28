@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
+import { download_image} from "./util.js";
+import Game, { GAME_STATE } from "./game.js";
 
 const REAL_IPD = 0.063; // 6.3 cm
 
@@ -10,6 +12,7 @@ export default class Scene {
 
     this.scene = new THREE.Scene();
     this.first_render = true;
+    this.game = new Game();
 
     // Initialize OneEuroFilters
     // minCutoff: lower = smoother when slow (less jitter)
@@ -64,6 +67,18 @@ export default class Scene {
       solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
     };
     this.detector = await faceLandmarksDetection.createDetector(model, config);
+  }
+
+  initClickDetection(){
+    this.renderer.domElement.addEventListener("click",() => {
+      if(this.game.state == GAME_STATE.STARTED || this.game.state == GAME_STATE.SELECT_IMAGE){
+        this.game.start_rolling();
+      } else if(this.game.state == GAME_STATE.ROLLING) {
+        this.game.stop_rolling();
+      }
+
+    })
+
   }
 
   // ===========================================
@@ -206,15 +221,29 @@ export default class Scene {
   // =======================================
   // OPTIONAL: Example 3D Object (Layer 1)
   // =======================================
-  create3DObjects() {
+  async create3DObjects() {
     // Container for the head tracking (Anchor at forehead)
     this.headAnchor = new THREE.Group();
     this.headAnchor.layers.set(1);
     this.scene.add(this.headAnchor);
 
+    //download start image
+
+    const startScreen = await download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png");
+
+    const tex = new THREE.Texture(startScreen);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+
     const geo = new THREE.PlaneGeometry(5, 5);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    this.box3D = new THREE.Mesh(geo, mat);
+    this.textureMap = new THREE.MeshBasicMaterial(
+      {
+        map: tex
+      }
+    );
+
+    this.box3D = new THREE.Mesh(geo, this.textureMap);
+
 
     // Offset relative to forehead (Anchor)
     // Moves the plane UP relative to the head orientation
