@@ -33,7 +33,7 @@ def main():
         usage="ex: python3 tools/create-indexed-json.py --input_dir=dataset",
     )
 
-    parser.add_argument("--input_dir", type=pathlib.Path, required=True)
+    parser.add_argument("--input_dir", type=pathlib.Path, required=False)
     parser.add_argument(
         "--output_dir", type=pathlib.Path, required=False, default=pathlib.Path("./")
     )
@@ -42,8 +42,15 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.input_dir:
+        input_dir = args.input_dir
+    else:
+        input_str = input("Please enter the path to the input directory: ")
+        input_str = input_str.strip('"').strip("'")
+        input_dir = pathlib.Path(input_str)
+
     output_file_name = args.output_file_name
-    input_dir = args.input_dir
     output_dir = args.output_dir.joinpath(output_file_name + EXTENSION)
     indexed_dir = index_dir_recursive(input_dir, input_dir)
 
