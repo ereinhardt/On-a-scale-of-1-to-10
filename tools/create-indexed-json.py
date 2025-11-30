@@ -10,7 +10,7 @@ def index_dir_recursive(current_path, start_dir):
     item_arr = []
 
     if current_path.is_file():
-        if "DS_Store" in current_path.name:
+        if not current_path.name.lower().endswith(".png"):
             return []
         return [str(current_path.relative_to(start_dir))]
 
@@ -20,7 +20,7 @@ def index_dir_recursive(current_path, start_dir):
         if item_path.is_dir():
             item_arr += index_dir_recursive(item_path, start_dir)
         else:
-            if "DS_Store" not in item_path.name:
+            if item_path.name.lower().endswith(".png"):
                 item_arr.append(str(item_path.relative_to(start_dir)))
 
     return item_arr
