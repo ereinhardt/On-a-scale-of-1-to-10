@@ -27,6 +27,7 @@ export default class Game {
     }
 
     start_rolling(){
+        this.currentImage = null;
         this.state = GAME_STATE.ROLLING;
     }
 
@@ -35,6 +36,7 @@ export default class Game {
     }
 
     select_image() {
+        this.lastSelected = this.currentImage;
         this.state = GAME_STATE.READY;
     }
 }
