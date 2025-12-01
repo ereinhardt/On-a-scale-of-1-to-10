@@ -12,6 +12,9 @@ export class ImageItem {
 export default class ImagePicker{
     constructor(urls, queue_length, allready_inserted_cap) {
         this.urls = urls;
+
+        if(this.urls.length < this.queue_length) throw Error("assert: this.urls < this.queue_length");
+
         this.queue_length = queue_length;
         this.queue = new Array(this.queue_length).fill(0);
         this.allreadyInsertedCap = allready_inserted_cap;

@@ -79,7 +79,11 @@ export default class Scene {
   async initImagePicker(){
 
     this.urls = [];
-    const imagePicker = new ImagePicker(this.urls, 10, 4);
+    const queue_length = Math.floor(this.urls / 2);
+
+    
+
+    const imagePicker = new ImagePicker(this.urls, queue_length, 4);
 
     await imagePicker.init();
 
