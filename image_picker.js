@@ -67,7 +67,7 @@ export default class ImagePicker{
         if(this.cache[url]) {
             img = this.cache[url];
         } else {
-            img = await this.download_image(url);
+            img = await download_image(url);
             this.cache[url] = img;
         } 
 
@@ -88,7 +88,7 @@ export default class ImagePicker{
     }
 
 
-    async nextImage(){
+    nextImage(){
 
         const random_url = this.getRandomUrl();
         const new_image = this.queue.shift();

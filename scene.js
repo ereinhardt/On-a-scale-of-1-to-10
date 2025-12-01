@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
 import { download_image} from "./util.js";
 import Game, { GAME_STATE } from "./game.js";
+import ImagePicker from "./image_picker.js";
 
 const REAL_IPD = 0.063; // 6.3 cm
 
@@ -13,6 +14,10 @@ export default class Scene {
     this.scene = new THREE.Scene();
     this.first_render = true;
     this.game = new Game();
+    this.clock = new THREE.Clock();
+    this.animationSpeed = 10; //how many pictures each Sec
+    this.delta = 0;
+    this.animationIntervall = 1 / this.animationSpeed;
 
     // Initialize OneEuroFilters
     // minCutoff: lower = smoother when slow (less jitter)
@@ -56,6 +61,8 @@ export default class Scene {
 
     // this.enableResponsive(); // Removed in favor of checkResize in animate
 
+    this.initImagePicker();
+
     this.renderer.setAnimationLoop(this.animate.bind(this));
   }
 
@@ -69,15 +76,39 @@ export default class Scene {
     this.detector = await faceLandmarksDetection.createDetector(model, config);
   }
 
+  async initImagePicker(){
+
+    this.urls = [];
+    const imagePicker = new ImagePicker(this.urls, 10, 4);
+
+    await imagePicker.init();
+
+    this.picker = imagePicker;
+  }
+
   initClickDetection(){
     this.renderer.domElement.addEventListener("click",() => {
-      if(this.game.state == GAME_STATE.STARTED || this.game.state == GAME_STATE.SELECT_IMAGE){
-        this.game.start_rolling();
-      } else if(this.game.state == GAME_STATE.ROLLING) {
-        this.game.stop_rolling();
-      }
+      if(this.picker) {
 
-    })
+        switch(this.game.state) {
+
+          case GAME_STATE.READY: 
+            this.game.start_rolling();
+            break;
+
+          case GAME_STATE.ROLLING:
+            this.game.stop_rolling();
+            break;  
+          
+          default: 
+            break;
+
+        }
+
+
+      };
+
+    }).bind(this);
 
   }
 
@@ -510,6 +541,30 @@ export default class Scene {
         }
       }
     }
+
+    this.delta += this.clock.getDelta();
+
+
+    //cap pictures each sec 
+    if(this.delta > this.animationIntervall) {
+     
+      if(this.game.state == GAME_STATE.ROLLING) {
+          console.log("Next Picture!");
+
+          this.game.currentImage = this.picker.nextImage();
+          const new_image = this.game.currentImage.image;
+
+          this.textureMap.map = new THREE.Texture(new_image);
+          this.textureMap.needsUpdate = true;
+        }
+     
+          this.delta = this.delta % this.animationIntervall;
+    }
+
+    
+
+
+
 
     // ==============================
     // RENDER PASS 1: Video/UI (Layer 0)
