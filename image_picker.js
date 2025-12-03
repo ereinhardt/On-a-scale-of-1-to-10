@@ -40,14 +40,29 @@ export default class ImagePicker{
 
     }
 
+    getRandomItem(){
+        
+        let currentItem = this.urls;
+        
+        while(!(currentItem instanceof Array)){
+            const keys = Object.keys(currentItem);
+            const random_key_index = Math.floor(Math.random() * keys.length);
+            const random_key = keys[random_key_index]
+            currentItem = currentItem[random_key];
+        }
+        
+        const random_index = Math.floor(Math.random() * currentItem.length);
+        const url = url[random_index];
+
+        return url;
+    }
+
     getRandomUrl(){
 
-        let random_index = Math.floor(Math.random() * this.urls.length)
-        let random_url = this.urls[random_index];
+        let random_url = this.getRandomItem();
 
         while(this.allreadyInserted(random_url)) {
-                random_index = Math.floor(Math.random() * this.urls.length)
-                random_url = this.urls[random_index];
+                random_url = this.getRandomItem();
         }
 
         return random_url;

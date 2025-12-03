@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
-import { download_image} from "./util.js";
+import { download_image, readJsonFile} from "./util.js";
 import Game, { GAME_STATE } from "./game.js";
 import ImagePicker from "./image_picker.js";
 
@@ -15,9 +15,10 @@ export default class Scene {
     this.first_render = true;
     this.game = new Game();
     this.clock = new THREE.Clock();
-    this.animationSpeed = 10; //how many pictures each Sec
+    this.animationSpeed = 3; //how many pictures each Sec
     this.delta = 0;
     this.animationIntervall = 1 / this.animationSpeed;
+    this.json_path = "indexed_json.json";
 
     // Initialize OneEuroFilters
     // minCutoff: lower = smoother when slow (less jitter)
@@ -78,11 +79,10 @@ export default class Scene {
 
   async initImagePicker(){
 
-    this.urls = [];
+    this.urls = await readJsonFile(this.json_path);
     const queue_length = Math.floor(this.urls / 2);
 
-    
-
+  
     const imagePicker = new ImagePicker(this.urls, queue_length, 4);
 
     await imagePicker.init();
