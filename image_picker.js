@@ -73,9 +73,12 @@ export default class ImagePicker {
     async setImage(url, i) {
         let img;
 
-        if (this.cache[url]) {
+        const cached_urls = Object.keys(this.cache);
+
+        if (cached_urls.includes(url)) {
             img = this.cache[url];
         } else {
+            console.log(cached_urls, url,cached_urls.includes(url));
             img = await download_image(url);
             this.cache[url] = img;
         }

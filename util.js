@@ -22,7 +22,7 @@ export async function download_image(path) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = path;
-        img.crossOrigin = "anonymous";
+        //img.crossOrigin = "anonymous";
 
         img.onload = () => {
             resolve(img);
