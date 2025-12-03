@@ -9,13 +9,11 @@ const REAL_IPD = 0.063; // 6.3 cm
 export default class Scene {
   constructor(video_stream) {
     this.video_stream = video_stream;
-    this.initFaceDetection();
-
     this.scene = new THREE.Scene();
     this.first_render = true;
     this.game = new Game();
     this.clock = new THREE.Clock();
-    this.animationSpeed = 3; //how many pictures each Sec
+    this.animationSpeed = 15; //how many pictures each Sec
     this.delta = 0;
     this.animationIntervall = 1 / this.animationSpeed;
     this.json_path = "indexed_json.json";
@@ -63,6 +61,8 @@ export default class Scene {
     // this.enableResponsive(); // Removed in favor of checkResize in animate
 
     this.initImagePicker();
+    this.initFaceDetection();
+    this.initClickDetection();
 
     this.renderer.setAnimationLoop(this.animate.bind(this));
   }
@@ -80,40 +80,33 @@ export default class Scene {
   async initImagePicker(){
 
     this.urls = await readJsonFile(this.json_path);
-    const queue_length = Math.floor(this.urls / 2);
+    const queue_length = Math.floor(3);
 
   
-    const imagePicker = new ImagePicker(this.urls, queue_length, 4);
+    const imagePicker = new ImagePicker(this.urls, queue_length, 1);
+
 
     await imagePicker.init();
 
     this.picker = imagePicker;
   }
 
+    onClick() {
+    if (!this.picker) return;
+
+    switch (this.game.state) {
+      case GAME_STATE.READY:
+        this.game.start_rolling();
+        break;
+
+      case GAME_STATE.ROLLING:
+        this.game.stop_rolling();
+        break;
+    }
+  }
+
   initClickDetection(){
-    this.renderer.domElement.addEventListener("click",() => {
-      if(this.picker) {
-
-        switch(this.game.state) {
-
-          case GAME_STATE.READY: 
-            this.game.start_rolling();
-            break;
-
-          case GAME_STATE.ROLLING:
-            this.game.stop_rolling();
-            break;  
-          
-          default: 
-            break;
-
-        }
-
-
-      };
-
-    }).bind(this);
-
+    document.getElementsByTagName("canvas")[0].addEventListener("click", this.onClick.bind(this));
   }
 
   // ===========================================
@@ -273,7 +266,8 @@ export default class Scene {
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial(
       {
-        map: tex
+        map: tex,
+        transparent: true
       }
     );
 
@@ -553,12 +547,14 @@ export default class Scene {
     if(this.delta > this.animationIntervall) {
      
       if(this.game.state == GAME_STATE.ROLLING) {
-          console.log("Next Picture!");
 
           this.game.currentImage = this.picker.nextImage();
-          const new_image = this.game.currentImage.image;
 
-          this.textureMap.map = new THREE.Texture(new_image);
+          const tex = new THREE.Texture(this.game.currentImage.image);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.needsUpdate = true;
+
+          this.textureMap.map = tex;
           this.textureMap.needsUpdate = true;
         }
      
