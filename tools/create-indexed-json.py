@@ -1,18 +1,48 @@
 import argparse
 import pathlib
 import json
+import re
 from os import listdir
 
 EXTENSION = ".json"
+CACHE = set()
+
+
+def getPath(current_path, start_dir):
+
+    if current_path.is_file():
+        if not current_path.name.lower().endswith(".png"):
+            return []
+
+        file_path = str(current_path.relative_to(start_dir))
+
+        id_res = re.search(
+            r"^(.*)/(.*)(__\d{1,4}__)(.*)$", file_path
+        )  # put id in cache
+
+        if not id_res:
+            raise ValueError(f"{file_path}: Invalid File Name!")
+
+        id = id_res.group(2)
+
+        if id in CACHE:
+            return []
+
+        file_path = re.sub(
+            r"(__\d{1,4}__)", "__**__", file_path
+        )  # replace res with placeholder
+
+        CACHE.add(id)
+
+        return [file_path]
 
 
 def index_dir_recursive(current_path, start_dir):
     item_arr = []
 
     if current_path.is_file():
-        if not current_path.name.lower().endswith(".png"):
-            return []
-        return [str(current_path.relative_to(start_dir))]
+        item_arr += getPath(current_path / start_dir, start_dir)
+        return item_arr
 
     for item in listdir(current_path):
         item_path = current_path / item
@@ -21,7 +51,7 @@ def index_dir_recursive(current_path, start_dir):
             item_arr += index_dir_recursive(item_path, start_dir)
         else:
             if item_path.name.lower().endswith(".png"):
-                item_arr.append(str(item_path.relative_to(start_dir)))
+                item_arr += getPath(item_path, start_dir)
 
     return item_arr
 
