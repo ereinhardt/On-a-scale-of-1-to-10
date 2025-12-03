@@ -37,23 +37,25 @@ def getPath(current_path, start_dir):
         return [file_path]
 
 
-def index_dir_recursive(current_path, start_dir):
-    item_arr = []
+def traverse_dir(current_path, start_dir):
+    result = {}
 
-    if current_path.is_file():
-        item_arr += getPath(current_path / start_dir, start_dir)
-        return item_arr
-
+    # Wenn es ein Verzeichnis ist → rekursiv
     for item in listdir(current_path):
         item_path = current_path / item
 
+        # Unterordner → rekursion
         if item_path.is_dir():
-            item_arr += index_dir_recursive(item_path, start_dir)
-        else:
-            if item_path.name.lower().endswith(".png"):
-                item_arr += getPath(item_path, start_dir)
+            result[item] = traverse_dir(item_path, start_dir)
 
-    return item_arr
+        # Datei → URL erzeugen
+        elif item_path.is_file():
+            url = getPath(item_path, start_dir)  # deine Funktion
+
+            if len(url) > 0:
+                result.setdefault("items", []).append(url[0])
+
+    return result
 
 
 def main():
@@ -82,7 +84,7 @@ def main():
 
     output_file_name = args.output_file_name
     output_dir = args.output_dir.joinpath(output_file_name + EXTENSION)
-    indexed_dir = index_dir_recursive(input_dir, input_dir)
+    indexed_dir = traverse_dir(input_dir, input_dir)
 
     with open(output_dir, "w+", encoding="utf-8") as f:
         f.write(json.dumps(indexed_dir, indent=4, ensure_ascii=False))
