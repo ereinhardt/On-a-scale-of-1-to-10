@@ -10,7 +10,6 @@ export function roundWithPrecision(num, precision) {
 }
 
 // OneEuroFilters for smoothing values in scene.js
-
 export class OneEuroFilter {
   constructor(minCutoff = 1.0, beta = 0.0) {
     this.minCutoff = minCutoff;

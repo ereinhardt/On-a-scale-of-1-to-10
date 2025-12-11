@@ -34,14 +34,10 @@ export default class Scene {
 
     this.lastFaceDetectedTime = 0;
 
-    // ====================================
     //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
-    // ====================================
     this.createOrthoCamera();
 
-    // ====================================
     //  CAMERA 2: PERSPECTIVE (3D rotation)
-    // ====================================
     this.createPerspectiveCamera();
 
     // RENDERER
@@ -109,9 +105,7 @@ export default class Scene {
     document.getElementsByTagName("canvas")[0].addEventListener("click", this.onClick.bind(this));
   }
 
-  // ===========================================
   // 1) ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
-  // ===========================================
   createOrthoCamera() {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -129,9 +123,7 @@ export default class Scene {
     this.orthoCam.layers.enable(0); // Layer0 = Video/UI
   }
 
-  // ===========================================
   // 2) PERSPECTIVE CAMERA – 3D FACE ROTATION
-  // ===========================================
   createPerspectiveCamera() {
     this.perspCam = new THREE.PerspectiveCamera(
       40,
@@ -145,9 +137,7 @@ export default class Scene {
     this.perspCam.layers.enable(1); // Layer1 = 3D Rotation-Objects
   }
 
-  // =======================
   // VIDEO PLANE (Layer 0)
-  // =======================
   createVideoPlane() {
     const geo = new THREE.PlaneGeometry(1, 1);
     const tex = new THREE.VideoTexture(this.video_stream);
@@ -228,9 +218,7 @@ export default class Scene {
     this.perspCam.updateProjectionMatrix();
   }
 
-  // ==========================
   // BOUNDING BOX (Layer 0)
-  // ==========================
   createBoundingBox() {
     const geo = new THREE.PlaneGeometry(1, 1);
     const mat = new THREE.MeshBasicMaterial({
@@ -246,9 +234,7 @@ export default class Scene {
     //this.scene.add(this.bbox);
   }
 
-  // =======================================
   // OPTIONAL: Example 3D Object (Layer 1)
-  // =======================================
   async create3DObjects() {
     // Container for the head tracking (Anchor at forehead)
     this.headAnchor = new THREE.Group();
@@ -282,9 +268,7 @@ export default class Scene {
     this.headAnchor.add(this.box3D);
   }
 
-  // ==================
   // RESPONSIVE
-  // ==================
   checkResize() {
     if (window.visualViewport && window.visualViewport.scale > 1.01) {
       return;
@@ -430,9 +414,7 @@ export default class Scene {
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
 
-  // ==================
   // ANIMATE
-  // ==================
   async animate(time) {
     this.checkResize();
 
@@ -561,22 +543,14 @@ export default class Scene {
           this.delta = this.delta % this.animationIntervall;
     }
 
-    
 
-
-
-
-    // ==============================
     // RENDER PASS 1: Video/UI (Layer 0)
-    // ==============================
     this.orthoCam.layers.set(0);
     this.renderer.render(this.scene, this.orthoCam);
 
     this.renderer.clearDepth();
 
-    // ==============================
     // RENDER PASS 2: 3D Objects (Layer 1)
-    // ==============================
     this.perspCam.layers.set(1);
     this.renderer.render(this.scene, this.perspCam);
   }
