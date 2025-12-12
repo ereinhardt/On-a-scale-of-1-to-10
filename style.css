@@ -7,3 +7,12 @@ canvas {
   width: 100vw;
   height: 100vh;
 }
+
+#user-count {
+  font-family: Helvetica, Arial, sans-serif;
+  position: fixed;
+  color: green;
+  top: 10px;
+  right: 10px;
+  z-index: 9999 !important;
+}

@@ -24,6 +24,7 @@ async function setupCamera() {
     const scene = new Scene(videoElement);
   } catch (error) {
     console.error(error);
+    alert("Camera not found. Please make sure you have a camera connected and have granted permission to use it.");
   }
 }
 
