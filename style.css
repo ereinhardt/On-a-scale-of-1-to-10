@@ -1,7 +1,7 @@
 body {
   margin: 0;
   background-color: black;
-  font-family: Helvetica, Arial, sans-serif;  /* Font */
+  font-family: Helvetica, Arial, sans-serif; /* Font */
   overflow: hidden;
 }
 
@@ -20,7 +20,6 @@ canvas {
 #user-count {
   position: fixed;
   color: lime;
-  font-size: small;
   top: 10px;
   right: 10px;
   z-index: 9999 !important;
@@ -46,7 +45,7 @@ canvas {
     )
   );
 
-   --item-margin: 10px;
+  --item-margin: 10px;
   left: var(--item-margin);
   top: calc(var(--item-margin) + var(--safe-top));
   bottom: calc(var(--item-margin) + var(--safe-bottom));
@@ -72,8 +71,8 @@ canvas {
   height: var(--item-size);
   width: calc(var(--item-size) * 2);
   display: flex;
-  align-items: flex-end;        /* 👉 rechts */
-  position: relative;           /* wichtig fürs Animieren mit absolute */
+  align-items: flex-end; /* 👉 rechts */
+  position: relative; /* wichtig fürs Animieren mit absolute */
 }
 
 .item-box {
@@ -85,8 +84,8 @@ canvas {
   font-size: calc(var(--item-size) * 0.42);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  border-radius: calc(var(--item-size) * 0.1);  /* If wanted */
-  background: rgba(255, 255, 255, 0.5); 
+  border-radius: calc(var(--item-size) * 0.1); /* If wanted */
+  background: rgba(255, 255, 255, 0.5);
   color: dimgrey;
   cursor: pointer;
 }
@@ -112,7 +111,7 @@ canvas {
 
 .item-box-number::before,
 .item-box-number::after {
-  content: '';
+  content: "";
   flex: 1;
   transition: flex-grow 0.25s ease, flex-basis 0.25s ease;
 }
@@ -128,4 +127,3 @@ canvas {
 .animate_number_reverse {
   left: 0;
 }
-
