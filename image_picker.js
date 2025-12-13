@@ -78,7 +78,6 @@ export default class ImagePicker {
         if (cached_urls.includes(url)) {
             img = this.cache[url];
         } else {
-            console.log(cached_urls, url,cached_urls.includes(url));
             img = await download_image(url);
             this.cache[url] = img;
         }

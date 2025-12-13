@@ -17,6 +17,7 @@ export default class Scene {
     this.delta = 0;
     this.animationIntervall = 1 / this.animationSpeed;
     this.json_path = "indexed_json.json";
+    this.resetTimeout = 2000;
 
     // Initialize OneEuroFilters
     // minCutoff: lower = smoother when slow (less jitter)
@@ -90,7 +91,10 @@ export default class Scene {
     onClick() {
     if (!this.picker) return;
 
+    console.log(this.game.state);
+
     switch (this.game.state) {
+      case GAME_STATE.STARTED:
       case GAME_STATE.READY:
         this.game.start_rolling();
         break;
@@ -248,6 +252,8 @@ export default class Scene {
     const tex = new THREE.Texture(startScreen);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.needsUpdate = true;
+    this.startScreen = tex;
+
 
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial(
@@ -436,6 +442,13 @@ export default class Scene {
       // Prevent flickering: Keep showing for 200ms after loss
       if (time - this.lastFaceDetectedTime > 200) {
         if (this.headAnchor) this.headAnchor.visible = false;
+
+      }
+
+      //reset game
+      if(time - this.lastFaceDetectedTime > this.resetTimeout 
+        && this.game.state != GAME_STATE.STARTED) {
+        this.game.reset();
       }
     }
 
@@ -541,6 +554,13 @@ export default class Scene {
         }
      
           this.delta = this.delta % this.animationIntervall;
+    }
+
+    if(
+      this.game.state == GAME_STATE.STARTED 
+      && this.startScreen) {
+        this.textureMap.map = this.startScreen;
+        this.textureMap.needsUpdate = true;
     }
 
 
