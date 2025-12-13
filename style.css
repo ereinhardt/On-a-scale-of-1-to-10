@@ -1,6 +1,8 @@
 body {
   margin: 0;
   background-color: black;
+  font-family: Helvetica, Arial, sans-serif;
+  overflow: hidden;
 }
 
 canvas {
@@ -8,11 +10,69 @@ canvas {
   height: 100vh;
 }
 
+@supports (height: 100dvh) {
+  canvas {
+    height: 100dvh;
+  }
+}
+
 #user-count {
-  font-family: Helvetica, Arial, sans-serif;
   position: fixed;
   color: green;
   top: 10px;
   right: 10px;
   z-index: 9999 !important;
+}
+
+#item-container {
+  position: fixed;
+  --viewport-h: 100vh;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --item-margin: 10px;
+  --item-gap: clamp(
+    2px,
+    calc((var(--viewport-h) - var(--safe-top) - var(--safe-bottom)) / 80),
+    10px
+  );
+  --item-size: max(
+    1px,
+    calc(
+      (
+          var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
+            (2 * var(--item-margin)) - (9 * var(--item-gap))
+        ) / 10
+    )
+  );
+  left: var(--item-margin);
+  top: calc(var(--item-margin) + var(--safe-top));
+  bottom: calc(var(--item-margin) + var(--safe-bottom));
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--item-gap);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@supports (height: 100dvh) {
+  #item-container {
+    --viewport-h: 100dvh;
+  }
+}
+
+.item-box {
+  width: var(--item-size);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--item-size) * 0.42);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
+  background: rgba(255, 255, 255, 0.5); 
+  border: none;
+  color: rgba(0, 0, 0, 0.5);
 }
