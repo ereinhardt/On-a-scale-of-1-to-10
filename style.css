@@ -116,7 +116,7 @@ canvas {
 }
 
 .animate_number {
-  right: calc(var(--item-size) / 2 + var(--item-gap)* 2);
+  right: calc(var(--item-size));
 }
 
 .animate_number_reverse {
