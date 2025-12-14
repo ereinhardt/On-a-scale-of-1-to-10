@@ -1,7 +1,7 @@
 body {
   margin: 0;
   background-color: black;
-  font-family: Helvetica, Arial, sans-serif; /* Font */
+  font-family: Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
 
@@ -40,15 +40,17 @@ canvas {
     calc(
       (
           var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
-            (2 * var(--item-margin)) - (9 * var(--item-gap))
-        ) / 10
+            (9 * var(--item-gap))
+        ) / 12
     )
   );
 
-  --item-margin: 10px;
-  left: var(--item-margin);
+   --item-margin: var(--item-size);
+  --number-gap: 10px;
+  --left: calc(var(--item-size) + var(--item-margin));
   top: calc(var(--item-margin) + var(--safe-top));
   bottom: calc(var(--item-margin) + var(--safe-bottom));
+  transform: none;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -71,21 +73,25 @@ canvas {
   height: var(--item-size);
   width: calc(var(--item-size) * 2);
   display: flex;
-  align-items: flex-end; /* 👉 rechts */
-  position: relative; /* wichtig fürs Animieren mit absolute */
+  flex-direction: row;      /* 👈 untereinander */
+  align-items: flex-end;        /* 👉 rechts */
+  justify-content: flex-end;    /* 👇 unten */
+  position: relative;           /* wichtig fürs Animieren mit absolute */
 }
 
 .item-box {
   width: var(--item-size);
   aspect-ratio: 1 / 1;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   font-size: calc(var(--item-size) * 0.42);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  border-radius: calc(var(--item-size) * 0.1); /* If wanted */
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: calc(var(--item-size) * 0.1);  /* If wanted */
+  background: rgba(255, 255, 255, 0.5); 
+  border: none;
   color: dimgrey;
   cursor: pointer;
 }
@@ -96,12 +102,12 @@ canvas {
   display: flex;
   position: absolute;
   bottom: 0;
-  transition: left 0.25s ease;
-  left: 0;
+  transition: right 0.25s ease;
+  right: 0;
   color: dimgrey;
+  flex-direction: row;
   align-items: center;
-  /* justify-content: center; Removed for pseudo-element centering */
-  box-sizing: border-box;
+  justify-content: center;
   font-size: calc(var(--item-size) * 0.42);
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -109,21 +115,11 @@ canvas {
   pointer-events: none;
 }
 
-.item-box-number::before,
-.item-box-number::after {
-  content: "";
-  flex: 1;
-  transition: flex-grow 0.25s ease, flex-basis 0.25s ease;
-}
-
 .animate_number {
-  left: calc(var(--item-size));
-}
-
-.animate_number::before {
-  flex: 0 0 10px;
+  right: calc(var(--item-size) / 2 + var(--item-gap)* 2);
 }
 
 .animate_number_reverse {
-  left: 0;
+  right: 0;
 }
+
