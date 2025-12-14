@@ -89,7 +89,7 @@ canvas {
   font-size: calc(var(--item-size) * 0.42);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  border-radius: calc(var(--item-size) * 0.1);  /* If wanted */
+  /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
   background: rgba(255, 255, 255, 0.5); 
   border: none;
   color: dimgrey;

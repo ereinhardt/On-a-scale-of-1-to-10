@@ -30,7 +30,7 @@
     <title>On a scale from 1 to 10</title>
   </head>
   <body>
-    <div id="user-count">Current users: 0</div>
+    <!-- <div id="user-count">Current users: 0</div> -->
 
     <div id="item-container" aria-hidden="true">
       <div class="item-box-container">
@@ -75,7 +75,7 @@
       </div>
     </div>
     
-    <script>
+    <!-- <script>
       (function() {
         // userId im sessionStorage speichern - bleibt bei Reload gleich
         let userId = sessionStorage.getItem('userId');
@@ -102,6 +102,6 @@
           navigator.sendBeacon(apiUrl + '?action=leave&userId=' + userId);
         });
       })();
-    </script>
+    </script> -->
   </body>
 </html>

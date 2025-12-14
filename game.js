@@ -88,10 +88,8 @@ export default class Game {
         this.placesSelected = 0;
         this.lastBoard = this.board;
         this.board = [];
-
-        const fields = Array.from(document.getElementsByClassName("item-box"));
-
         let i = 0;
+        const fields = Array.from(document.getElementsByClassName("item-box"));
         const nums = Array.from(document.getElementsByClassName("item-box-number"));
 
 

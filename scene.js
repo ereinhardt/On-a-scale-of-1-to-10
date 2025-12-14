@@ -18,6 +18,7 @@ export default class Scene {
     this.animationIntervall = 1 / this.animationSpeed;
     this.json_path = "indexed_json.json";
     this.resetTimeout = 2000;
+    this.lastSelectedImageBeforeReset = null;
 
     // Initialize OneEuroFilters
     // minCutoff: lower = smoother when slow (less jitter)
@@ -91,7 +92,6 @@ export default class Scene {
     onClick() {
     if (!this.picker) return;
 
-    console.log(this.game.state);
 
     switch (this.game.state) {
       case GAME_STATE.STARTED:
@@ -448,6 +448,10 @@ export default class Scene {
       //reset game
       if(time - this.lastFaceDetectedTime > this.resetTimeout 
         && this.game.state != GAME_STATE.STARTED) {
+
+        if(this.game.state == GAME_STATE.SELECT_IMAGE) {
+          this.lastSelectedImageBeforeReset = this.game.currentImage;
+        }
         this.game.reset();
       }
     }
@@ -555,6 +559,19 @@ export default class Scene {
      
           this.delta = this.delta % this.animationIntervall;
     }
+
+    //pick the last picture 
+    if(this.game.state == GAME_STATE.SELECT_IMAGE 
+      && this.lastSelectedImageBeforeReset
+    ){     
+          this.game.currentImage = this.lastSelectedImageBeforeReset;
+          const tex = new THREE.Texture(this.game.currentImage.image);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.needsUpdate = true;
+          this.textureMap.map = tex;
+          this.textureMap.needsUpdate = true;
+          this.lastSelectedImageBeforeReset = null;
+    } 
 
     if(
       this.game.state == GAME_STATE.STARTED 
