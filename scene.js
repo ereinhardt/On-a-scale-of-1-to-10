@@ -255,6 +255,18 @@ export default class Scene {
     this.startScreen = tex;
 
 
+    // Background Plane (Color, Opacity) 
+    const bgGeo = new THREE.PlaneGeometry(5, 5);
+    const bgMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.5,
+    });
+    this.bgMesh = new THREE.Mesh(bgGeo, bgMat);
+    this.bgMesh.position.set(0, 5, -0.05); // Slightly behind
+    this.bgMesh.layers.set(1);
+    this.headAnchor.add(this.bgMesh);
+
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial(
       {
