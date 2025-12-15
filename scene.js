@@ -440,9 +440,13 @@ export default class Scene {
     this.renderer.clear();
 
     // Face Mesh
-    if (this.detector) {
+    if (this.detector && this.video_stream.readyState >= 2 && this.video_stream.videoWidth > 0 && this.video_stream.videoHeight > 0) {
       const options = { maxFaces: 1, flipHorizontal: true };
-      this.face = await this.detector.estimateFaces(this.video_stream, options);
+      try {
+        this.face = await this.detector.estimateFaces(this.video_stream, options);
+      } catch (error) {
+        console.warn("Face detection skipped:", error);
+      }
     }
 
     const faceFound = this.face && this.face.length > 0;

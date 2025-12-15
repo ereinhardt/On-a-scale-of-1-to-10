@@ -22,6 +22,27 @@ async function setupCamera() {
     await videoElement.play();
 
     const scene = new Scene(videoElement);
+
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState === "visible") {
+        try {
+          const stream = videoElement.srcObject;
+          const videoTrack = stream ? stream.getVideoTracks()[0] : null;
+
+          if (!stream || !videoTrack || videoTrack.readyState === "ended" || videoElement.paused) {
+            if (videoTrack && videoTrack.readyState === "live" && videoElement.paused) {
+              await videoElement.play();
+            } else {
+              const newStream = await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
+              videoElement.srcObject = newStream;
+              await videoElement.play();
+            }
+          }
+        } catch (e) {
+          console.error("Error resuming camera:", e);
+        }
+      }
+    });
   } catch (error) {
     console.error(error);
     alert("Camera not found. Please make sure you have a camera connected and have granted permission to use it.");
