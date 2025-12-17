@@ -44,6 +44,7 @@ export default class Scene {
 
     // RENDERER
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // High-DPI support (capped at 1.5 for performance)
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
@@ -289,8 +290,8 @@ export default class Scene {
     this.box3D.layers.set(1);
     this.headAnchor.add(this.box3D);
 
-    // Text Label
-    const labelGeo = new THREE.PlaneGeometry(5, 1.25);
+    // Text Label (wider than image plane to fit longer names)
+    const labelGeo = new THREE.PlaneGeometry(10, 1.25);
     const labelMat = new THREE.MeshBasicMaterial({
       map: this.createLabelTexture(""),
       transparent: true,
@@ -460,14 +461,14 @@ export default class Scene {
   createLabelTexture(text) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = 1024;
+    canvas.width = 2048;  // Wider canvas to match 10:1.25 plane ratio (8:1)
     canvas.height = 256;
 
     ctx.fillStyle = "rgba(0, 0, 0, 0)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (text) {
-      const fontSize = Math.round(canvas.height * 0.36);
+      const fontSize = 92;
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "dimgrey";
       ctx.textAlign = "center";
