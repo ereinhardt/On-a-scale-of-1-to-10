@@ -299,7 +299,7 @@ export default class Scene {
       depthWrite: false, // Prevents z-fighting with box3D
     });
     this.textMesh = new THREE.Mesh(labelGeo, labelMat);
-    this.textMesh.position.set(0, 7.9, 0);
+    this.textMesh.position.set(0, 7.85, 0); // Textdistance to box3D
     this.textMesh.renderOrder = 1; // Render after box3D
     this.textMesh.layers.set(1);
     this.headAnchor.add(this.textMesh);
