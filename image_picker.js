@@ -48,7 +48,12 @@ export default class ImagePicker {
         }
 
         const random_index = Math.floor(Math.random() * currentItem.length);
-        const url = "item-data-test/" + currentItem[random_index].replace("**", "256");  // ✔ korrekt
+
+        // Use screen dimensions to avoid triggering on resized desktop windows
+        const isPhone = Math.min(window.screen.width, window.screen.height) < 768;
+        const resolution = isPhone ? "256" : "512"; // Phone 256, Tablet, Desktop 512
+
+        const url = "item-data-test/" + currentItem[random_index].replace("**", resolution);
 
         return url;
     }
