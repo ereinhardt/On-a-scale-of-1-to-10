@@ -86,7 +86,7 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.42);
+  font-size: calc(var(--item-size) * 0.36);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
@@ -108,7 +108,7 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.42);
+  font-size: calc(var(--item-size) * 0.36);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   z-index: 1;

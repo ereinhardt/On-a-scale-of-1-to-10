@@ -261,9 +261,11 @@ export default class Scene {
       color: 0xffffff,
       transparent: true,
       opacity: 0.5,
+      depthWrite: false, // Prevents z-fighting
     });
     this.bgMesh = new THREE.Mesh(bgGeo, bgMat);
-    this.bgMesh.position.set(0, 5, -0.05); // Slightly behind
+    this.bgMesh.position.set(0, 5, 0); // Tiny offset to avoid z-fighting, minimal parallax
+    this.bgMesh.renderOrder = -1; // Render behind using render order instead
     this.bgMesh.layers.set(1);
     this.headAnchor.add(this.bgMesh);
 
@@ -275,15 +277,31 @@ export default class Scene {
       }
     );
 
+
     this.box3D = new THREE.Mesh(geo, this.textureMap);
 
 
     // Offset relative to forehead (Anchor)
     // Moves the plane UP relative to the head orientation
     this.box3D.position.set(0, 5, 0);
+    this.box3D.renderOrder = 0;
 
     this.box3D.layers.set(1);
     this.headAnchor.add(this.box3D);
+
+    // Text Label
+    const labelGeo = new THREE.PlaneGeometry(5, 1.25);
+    const labelMat = new THREE.MeshBasicMaterial({
+      map: this.createLabelTexture(""),
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false, // Prevents z-fighting with box3D
+    });
+    this.textMesh = new THREE.Mesh(labelGeo, labelMat);
+    this.textMesh.position.set(0, 7.9, 0);
+    this.textMesh.renderOrder = 1; // Render after box3D
+    this.textMesh.layers.set(1);
+    this.headAnchor.add(this.textMesh);
   }
 
   // RESPONSIVE
@@ -431,7 +449,36 @@ export default class Scene {
     // m = 0.5m → close, m = 1.5m → far
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
+  extractNameFromPath(path) {
+    if (!path) return "";
+    const parts = path.split("__");
+    const filename = parts[parts.length - 1];
+    const name = filename.substring(0, filename.lastIndexOf("."));
+    return name.replace(/_/g, " ");
+  }
 
+  createLabelTexture(text) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 1024;
+    canvas.height = 256;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0)";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (text) {
+      const fontSize = Math.round(canvas.height * 0.36);
+      ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
+      ctx.fillStyle = "dimgrey";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
   // ANIMATE
   async animate(time) {
     this.checkResize();
@@ -571,6 +618,12 @@ export default class Scene {
 
           this.textureMap.map = tex;
           this.textureMap.needsUpdate = true;
+
+          if (this.textMesh) {
+            const name = this.extractNameFromPath(this.game.currentImage.id);
+            this.textMesh.material.map = this.createLabelTexture(name);
+            this.textMesh.material.needsUpdate = true;
+          }
         }
      
           this.delta = this.delta % this.animationIntervall;
@@ -586,6 +639,13 @@ export default class Scene {
           tex.needsUpdate = true;
           this.textureMap.map = tex;
           this.textureMap.needsUpdate = true;
+
+          if (this.textMesh) {
+            const name = this.extractNameFromPath(this.game.currentImage.id);
+            this.textMesh.material.map = this.createLabelTexture(name);
+            this.textMesh.material.needsUpdate = true;
+          }
+
           this.lastSelectedImageBeforeReset = null;
     } 
 
@@ -594,6 +654,11 @@ export default class Scene {
       && this.startScreen) {
         this.textureMap.map = this.startScreen;
         this.textureMap.needsUpdate = true;
+
+        if (this.textMesh) {
+          this.textMesh.material.map = this.createLabelTexture("");
+          this.textMesh.material.needsUpdate = true;
+        }
     }
 
 
