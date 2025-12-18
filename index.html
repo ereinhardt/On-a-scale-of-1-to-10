@@ -77,8 +77,10 @@
       </div>
     </div>
     
-    <!-- <script>
+    <script>
       (function() {
+        // --- User Count (disabled) ---
+        /*
         // userId im sessionStorage speichern - bleibt bei Reload gleich
         let userId = sessionStorage.getItem('userId');
         if (!userId) {
@@ -103,11 +105,9 @@
         window.addEventListener('beforeunload', function() {
           navigator.sendBeacon(apiUrl + '?action=leave&userId=' + userId);
         });
-      })();
-    </script> -->
+        */
 
-    <script>
-      (function() {
+        // --- Global Average Overlay ---
         const btn = document.getElementById('global-average-btn');
         const overlay = document.getElementById('global-average-overlay');
         let isOpen = false;
