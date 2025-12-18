@@ -299,7 +299,7 @@ export default class Scene {
       depthWrite: false, // Prevents z-fighting with box3D
     });
     this.textMesh = new THREE.Mesh(labelGeo, labelMat);
-    this.textMesh.position.set(0, 7.85, 0); // Textdistance to box3D
+    this.textMesh.position.set(0, 7.9, 0); // Textdistance to box3D – 10 more far
     this.textMesh.renderOrder = 1; // Render after box3D
     this.textMesh.layers.set(1);
     this.headAnchor.add(this.textMesh);
@@ -468,7 +468,7 @@ export default class Scene {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (text) {
-      const fontSize = 92;
+      const fontSize = 100;
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "dimgrey";
       ctx.textAlign = "center";
