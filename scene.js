@@ -261,7 +261,7 @@ export default class Scene {
     const bgMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.66,
       depthWrite: false, // Prevents z-fighting
     });
     this.bgMesh = new THREE.Mesh(bgGeo, bgMat);

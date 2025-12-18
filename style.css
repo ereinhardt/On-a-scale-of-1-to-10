@@ -5,6 +5,35 @@ body {
   overflow: hidden;
 }
 
+:root {
+  --viewport-h: 100vh;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --item-gap: clamp(
+    2px,
+    calc((var(--viewport-h) - var(--safe-top) - var(--safe-bottom)) / 80),
+    10px
+  );
+  --item-size: max(
+    1px,
+    calc(
+      (
+          var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
+            (9 * var(--item-gap))
+        ) / 12
+    )
+  );
+  --item-margin: var(--item-size);
+  --number-gap: 10px;
+  --left: calc(var(--item-size) + var(--item-margin));
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-h: 100dvh;
+  }
+}
+
 canvas {
   width: 100vw;
   height: 100vh;
@@ -27,27 +56,6 @@ canvas {
 
 #item-container {
   position: fixed;
-  --viewport-h: 100vh;
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --item-gap: clamp(
-    2px,
-    calc((var(--viewport-h) - var(--safe-top) - var(--safe-bottom)) / 80),
-    10px
-  );
-  --item-size: max(
-    1px,
-    calc(
-      (
-          var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
-            (9 * var(--item-gap))
-        ) / 12
-    )
-  );
-
-   --item-margin: var(--item-size);
-  --number-gap: 10px;
-  --left: calc(var(--item-size) + var(--item-margin));
   top: calc(var(--item-margin) + var(--safe-top));
   bottom: calc(var(--item-margin) + var(--safe-bottom));
   transform: none;
@@ -61,12 +69,6 @@ canvas {
 #item-container img {
   width: 100%;
   height: auto;
-}
-
-@supports (height: 100dvh) {
-  #item-container {
-    --viewport-h: 100dvh;
-  }
 }
 
 .item-box-container {
@@ -86,11 +88,11 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.36);
+  font-size: calc(var(--item-size) * 0.35);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
-  background: rgba(255, 255, 255, 0.5); 
+  background: rgba(255, 255, 255, 0.66); 
   border: none;
   color: dimgrey;
   cursor: pointer;
@@ -108,7 +110,7 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.36);
+  font-size: calc(var(--item-size) * 0.35);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   z-index: 1;
@@ -121,5 +123,30 @@ canvas {
 
 .animate_number_reverse {
   right: 0;
+}
+
+#global-average-btn {
+  position: fixed;
+  font-size: calc(var(--item-size) * 0.25);
+  top: var(--item-gap);
+  right: var(--item-gap);
+  z-index: 10001;
+  cursor: pointer;
+
+}
+
+#global-average-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.66);
+  z-index: 10000;
+  display: none;
+}
+
+#global-average-overlay.open {
+  display: block;
 }
 

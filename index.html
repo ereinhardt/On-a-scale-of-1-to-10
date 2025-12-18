@@ -30,6 +30,8 @@
     <title>On a scale from 1 to 10</title>
   </head>
   <body>
+    <button id="global-average-btn">Global Average</button>
+    <div id="global-average-overlay"></div>
     <!-- <div id="user-count">Current users: 0</div> -->
 
     <div id="item-container" aria-hidden="true">
@@ -103,5 +105,24 @@
         });
       })();
     </script> -->
+
+    <script>
+      (function() {
+        const btn = document.getElementById('global-average-btn');
+        const overlay = document.getElementById('global-average-overlay');
+        let isOpen = false;
+
+        btn.addEventListener('click', function() {
+          isOpen = !isOpen;
+          if (isOpen) {
+            overlay.classList.add('open');
+            btn.textContent = 'Return to Rank';
+          } else {
+            overlay.classList.remove('open');
+            btn.textContent = 'Global Average';
+          }
+        });
+      })();
+    </script>
   </body>
 </html>
