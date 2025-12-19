@@ -196,6 +196,10 @@ export default class Scene {
     // store ratio for mapping video pixels to scaled pixels
     this.videoScale = this._videoScaledW / vw;
 
+    // Store screen dimensions for viewport check
+    this._screenW = sw;
+    this._screenH = sh;
+
     // Adjust Perspective Camera FOV to match Video Zoom
     // This ensures 3D objects stay in proportion to the video background
     // regardless of cropping (Mobile vs Desktop).
@@ -343,6 +347,34 @@ export default class Scene {
 
       this.updateVideoScale();
     }
+  }
+
+  // Check if face bounding box is visible in the viewport
+  isFaceInViewport(face) {
+    if (!face || !face.box) return false;
+
+    const box = face.box;
+    const vw = this.video_stream.videoWidth;
+    const vh = this.video_stream.videoHeight;
+    
+    if (!vw || !vh || !this._videoScaledW) return false;
+
+    // Get face center in video pixel space
+    const faceCenterX = box.xMin + box.width / 2;
+    const faceCenterY = box.yMin + box.height / 2;
+
+    // Convert to canvas pixel coords
+    const canvasPos = this.videoPixelToCanvasPixel(faceCenterX, faceCenterY);
+
+    // Check if face center is within the visible screen area
+    const margin = 0; // Could add some margin if needed
+    const inViewport = 
+      canvasPos.x >= -margin && 
+      canvasPos.x <= this._screenW + margin &&
+      canvasPos.y >= -margin && 
+      canvasPos.y <= this._screenH + margin;
+
+    return inViewport;
   }
 
   // map video pixel coords (px,py) -> canvas pixel coords
@@ -498,8 +530,9 @@ export default class Scene {
     }
 
     const faceFound = this.face && this.face.length > 0;
+    const faceInViewport = faceFound && this.isFaceInViewport(this.face[0]);
 
-    if (faceFound) {
+    if (faceInViewport) {
       this.lastFaceDetectedTime = time;
       if (this.headAnchor) this.headAnchor.visible = true;
     } else {
@@ -521,7 +554,7 @@ export default class Scene {
     }
 
     // Update Bounding Box
-    if (faceFound) {
+    if (faceInViewport) {
       const f = this.face[0];
       const box = f.box;
 
