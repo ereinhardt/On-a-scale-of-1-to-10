@@ -130,7 +130,7 @@ canvas {
 
 #global-average-btn {
   position: fixed;
-  font-size: calc(var(--item-size) * 0.2);
+  font-size: calc(var(--item-size) * 0.25);
   top: var(--item-gap);
   right: var(--item-gap);
   z-index: 10001;
