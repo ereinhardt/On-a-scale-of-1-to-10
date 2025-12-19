@@ -85,6 +85,13 @@ for ($i = 0; $i < count($data); $i++) {
     }
 
     $current_index = $current_item["index"];
+    
+    // Validate index is an integer between 1 and 10 (no decimals)
+    if (!is_numeric($current_index) || $current_index != (int)$current_index || $current_index < 1 || $current_index > 10) {
+        continue;
+    }
+    
+    $current_index = (int) $current_index; // Ensure it's an integer
     $current_image = $current_item["image"];
 
     if (!isset($global_average[$current_image])) {
