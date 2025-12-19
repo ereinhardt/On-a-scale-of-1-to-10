@@ -2,7 +2,7 @@
 
 ## Pre-UUID Filename Structure
 
-The Item-Image need to be a PNG in following Structure:
+The Item-Image need to be a PNG (1024 × 1024px / 8bit) in following Structure:
 
 ```bash
 1024__8bit__CATEGORY-NAME__ITEM-LABEL.png
