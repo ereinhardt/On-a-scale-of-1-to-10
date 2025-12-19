@@ -16,7 +16,7 @@ export default class Scene {
     this.animationSpeed = 15; //how many pictures each Sec
     this.delta = 0;
     this.animationIntervall = 1 / this.animationSpeed;
-    this.json_path = "indexed_json.json";
+    this.json_path = "js/indexed_json.json";
     this.resetTimeout = 2000;
     this.lastSelectedImageBeforeReset = null;
 

@@ -1,10 +1,29 @@
-
 export const GAME_STATE = Object.freeze({
     STARTED: 0,
     READY: 1,
     ROLLING: 2,
     SELECT_IMAGE: 3
 })
+
+
+class GameSerializer {
+    constructor(board) {
+        this.game = [];
+        
+        board.forEach((field) => {
+            if (field && field.image && field.image.image) {
+                
+                let imagePath = field.image.image.getAttribute("src");
+
+                this.game.push({
+                    image: imagePath.replace(/(1024)|(512)|(256)/, "**").replace("item-data-test/", ""),
+                    index: field.index
+                });
+            }
+        }); 
+    }
+}
+
 
 export class Field {
     constructor(image, index) {
@@ -33,14 +52,14 @@ export default class Game {
     }
 
     enable_selection(){
-        console.log("enable selection");
+        //console.log("enable selection");
         const fields = Array.from(document.getElementsByClassName("item-box"));
         for(const field of fields) {
-            console.log(field);
+            //console.log(field);
             field.addEventListener("click", (e) => {
                 
                 const index = fields.indexOf(field);
-                console.log("Selected Field: " + index );
+                //console.log("Selected Field: " + index );
                 if(this.state == GAME_STATE.SELECT_IMAGE && !this.board[index]) {
 
                     this.placesSelected++;
@@ -81,12 +100,19 @@ export default class Game {
         this.state = GAME_STATE.SELECT_IMAGE;
     }
 
-    reset() {
+    async reset() {
         this.state = GAME_STATE.STARTED;
         this.lastSelected = null;
         this.currentImage = null;
         this.placesSelected = 0;
         this.lastBoard = this.board;
+
+        console.log("BoardLength:", this.board.length);
+
+        if(this.board.length > 2) {
+            await this.sendGameData();
+        }
+
         this.board = [];
         let i = 0;
         const fields = Array.from(document.getElementsByClassName("item-box"));
@@ -105,6 +131,25 @@ export default class Game {
         }
 
 
+    }
+
+    async sendGameData() {
+        const serializer = new GameSerializer(this.board);
+        const gameData = JSON.stringify(serializer.game);
+        console.log("Sending game data:", gameData);
+        const res = await fetch("backend/receive-global-average.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: gameData
+        });
+
+        console.log("Response:", res);  
+        
+        if (!res.ok) {
+            throw new Error("Failed to send game data: " + res.statusText);
+        }
     }
 
     select_image() {
