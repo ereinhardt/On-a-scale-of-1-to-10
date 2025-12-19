@@ -111,7 +111,7 @@ for ($i = 0; $i < count($data); $i++) {
     
     if ($count > 0) {
         $classical_average = $total_sum / $count;
-        $global_average[$current_image]["average"] = ($classical_average * 0.8 + $current_index * 0.2) / 2;
+        $global_average[$current_image]["average"] = $classical_average * 0.8 + $current_index * 0.2;
     }
 }
 
