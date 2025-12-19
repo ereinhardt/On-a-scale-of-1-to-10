@@ -49,6 +49,27 @@ export default class Game {
         this.placesSelected = 0;
         this.lastBoard = [];
         this.enable_selection();
+        this.updateBodyState();
+    }
+
+    updateBodyState() {
+        const body = document.body;
+        body.classList.remove('state-started', 'state-ready', 'state-rolling', 'state-select-image');
+        
+        switch(this.state) {
+            case GAME_STATE.STARTED:
+                body.classList.add('state-started');
+                break;
+            case GAME_STATE.READY:
+                body.classList.add('state-ready');
+                break;
+            case GAME_STATE.ROLLING:
+                body.classList.add('state-rolling');
+                break;
+            case GAME_STATE.SELECT_IMAGE:
+                body.classList.add('state-select-image');
+                break;
+        }
     }
 
     enable_selection(){
@@ -94,14 +115,17 @@ export default class Game {
     start_rolling(){
         this.currentImage = null;
         this.state = GAME_STATE.ROLLING;
+        this.updateBodyState();
     }
 
     stop_rolling() {
         this.state = GAME_STATE.SELECT_IMAGE;
+        this.updateBodyState();
     }
 
     async reset() {
         this.state = GAME_STATE.STARTED;
+        this.updateBodyState();
         this.lastSelected = null;
         this.currentImage = null;
         this.placesSelected = 0;
@@ -155,5 +179,6 @@ export default class Game {
     select_image() {
         this.lastSelected = this.currentImage;
         this.state = GAME_STATE.READY;
+        this.updateBodyState();
     }
 }

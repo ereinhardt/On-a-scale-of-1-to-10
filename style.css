@@ -98,7 +98,6 @@ canvas {
   background: rgba(255, 255, 255, 0.7); 
   border: none;
   color: dimgrey;
-  cursor: pointer;
 }
 
 .item-box-number {
@@ -154,5 +153,29 @@ canvas {
 #global-average-overlay.open {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Cursor styles for different game states */
+
+/* STARTED/READY/ROLLING: Canvas has pointer, item-boxes don't */
+body.state-started canvas,
+body.state-ready canvas,
+body.state-rolling canvas {
+  cursor: pointer;
+}
+
+body.state-started .item-box,
+body.state-ready .item-box,
+body.state-rolling .item-box {
+  cursor: default;
+}
+
+/* SELECT_IMAGE: Item-boxes have pointer, canvas doesn't */
+body.state-select-image canvas {
+  cursor: default;
+}
+
+body.state-select-image .item-box {
+  cursor: pointer;
 }
 
