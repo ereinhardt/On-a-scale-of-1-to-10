@@ -22,7 +22,7 @@
     <script src="./js/image_picker.js" defer type="module"></script>
     <!-- Require the peer dependencies of face-landmarks-detection. -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <!-- You must explicitly require a TF.js backend if you're not using the TF.js union bundle. -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
@@ -37,49 +37,49 @@
 
     <div id="item-container" aria-hidden="true">
       <div class="item-box-container">
-        <div class="item-box-number">1</div>  
+        <div class="item-box-number">1</div>
         <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">2</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">2</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">3</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">3</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">4</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">4</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">5</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">5</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">6</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">6</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">7</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">7</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">8</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">8</div>
+        <div class="item-box"></div>
       </div>
       <div class="item-box-container">
-         <div class="item-box-number">9</div>  
-          <div class="item-box"></div>
+        <div class="item-box-number">9</div>
+        <div class="item-box"></div>
       </div>
-        <div class="item-box-container">
-           <div class="item-box-number">10</div>  
-          <div class="item-box"></div>
+      <div class="item-box-container">
+        <div class="item-box-number">10</div>
+        <div class="item-box"></div>
       </div>
     </div>
-    
+
     <script>
-      (function() {
+      (function () {
         /*
         // --- User Count (disabled) ---
         // userId im sessionStorage speichern - bleibt bei Reload gleich
@@ -109,18 +109,18 @@
        */
 
         // --- Global Average Overlay ---
-        const btn = document.getElementById('global-average-btn');
-        const overlay = document.getElementById('global-average-overlay');
+        const btn = document.getElementById("global-average-btn");
+        const overlay = document.getElementById("global-average-overlay");
         let isOpen = false;
 
-        btn.addEventListener('click', function() {
+        btn.addEventListener("click", function () {
           isOpen = !isOpen;
           if (isOpen) {
-            overlay.classList.add('open');
-            btn.textContent = 'Return to Input';
+            overlay.classList.add("open");
+            btn.textContent = "Return to Input";
           } else {
-            overlay.classList.remove('open');
-            btn.textContent = 'Global Average';
+            overlay.classList.remove("open");
+            btn.textContent = "Global Average";
           }
         });
       })();

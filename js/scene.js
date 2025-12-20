@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
-import { download_image, readJsonFile} from "./util.js";
+import { download_image, readJsonFile } from "./util.js";
 import Game, { GAME_STATE } from "./game.js";
 import ImagePicker from "./image_picker.js";
 
@@ -76,23 +76,19 @@ export default class Scene {
     this.detector = await faceLandmarksDetection.createDetector(model, config);
   }
 
-  async initImagePicker(){
-
+  async initImagePicker() {
     this.urls = await readJsonFile(this.json_path);
     const queue_length = Math.floor(3);
 
-  
     const imagePicker = new ImagePicker(this.urls, queue_length, 1);
-
 
     await imagePicker.init();
 
     this.picker = imagePicker;
   }
 
-    onClick() {
+  onClick() {
     if (!this.picker) return;
-
 
     switch (this.game.state) {
       case GAME_STATE.STARTED:
@@ -106,8 +102,10 @@ export default class Scene {
     }
   }
 
-  initClickDetection(){
-    document.getElementsByTagName("canvas")[0].addEventListener("click", this.onClick.bind(this));
+  initClickDetection() {
+    document
+      .getElementsByTagName("canvas")[0]
+      .addEventListener("click", this.onClick.bind(this));
   }
 
   // 1) ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
@@ -252,15 +250,16 @@ export default class Scene {
 
     //download start image
 
-    const startScreen = await download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png");
+    const startScreen = await download_image(
+      "start_screen/1024__8bit__On_a_scale_from_1_to_10.png"
+    );
 
     const tex = new THREE.Texture(startScreen);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.needsUpdate = true;
     this.startScreen = tex;
 
-
-    // Background Plane (Color, Opacity) 
+    // Background Plane (Color, Opacity)
     const bgGeo = new THREE.PlaneGeometry(5, 5);
     const bgMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -275,16 +274,12 @@ export default class Scene {
     this.headAnchor.add(this.bgMesh);
 
     const geo = new THREE.PlaneGeometry(5, 5);
-    this.textureMap = new THREE.MeshBasicMaterial(
-      {
-        map: tex,
-        transparent: true
-      }
-    );
-
+    this.textureMap = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+    });
 
     this.box3D = new THREE.Mesh(geo, this.textureMap);
-
 
     // Offset relative to forehead (Anchor)
     // Moves the plane UP relative to the head orientation
@@ -356,7 +351,7 @@ export default class Scene {
     const box = face.box;
     const vw = this.video_stream.videoWidth;
     const vh = this.video_stream.videoHeight;
-    
+
     if (!vw || !vh || !this._videoScaledW) return false;
 
     // Get face center in video pixel space
@@ -368,10 +363,10 @@ export default class Scene {
 
     // Check if face center is within the visible screen area
     const margin = 0; // Could add some margin if needed
-    const inViewport = 
-      canvasPos.x >= -margin && 
+    const inViewport =
+      canvasPos.x >= -margin &&
       canvasPos.x <= this._screenW + margin &&
-      canvasPos.y >= -margin && 
+      canvasPos.y >= -margin &&
       canvasPos.y <= this._screenH + margin;
 
     return inViewport;
@@ -493,7 +488,7 @@ export default class Scene {
   createLabelTexture(text) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = 2048;  // Wider canvas to match 10:1.25 plane ratio (8:1)
+    canvas.width = 2048; // Wider canvas to match 10:1.25 plane ratio (8:1)
     canvas.height = 256;
 
     ctx.fillStyle = "rgba(0, 0, 0, 0)";
@@ -520,10 +515,18 @@ export default class Scene {
     this.renderer.clear();
 
     // Face Mesh
-    if (this.detector && this.video_stream.readyState >= 2 && this.video_stream.videoWidth > 0 && this.video_stream.videoHeight > 0) {
+    if (
+      this.detector &&
+      this.video_stream.readyState >= 2 &&
+      this.video_stream.videoWidth > 0 &&
+      this.video_stream.videoHeight > 0
+    ) {
       const options = { maxFaces: 1, flipHorizontal: true };
       try {
-        this.face = await this.detector.estimateFaces(this.video_stream, options);
+        this.face = await this.detector.estimateFaces(
+          this.video_stream,
+          options
+        );
       } catch (error) {
         console.warn("Face detection skipped:", error);
       }
@@ -539,14 +542,14 @@ export default class Scene {
       // Prevent flickering: Keep showing for 200ms after loss
       if (time - this.lastFaceDetectedTime > 200) {
         if (this.headAnchor) this.headAnchor.visible = false;
-
       }
 
       //reset game
-      if(time - this.lastFaceDetectedTime > this.resetTimeout 
-        && this.game.state != GAME_STATE.STARTED) {
-
-        if(this.game.state == GAME_STATE.SELECT_IMAGE) {
+      if (
+        time - this.lastFaceDetectedTime > this.resetTimeout &&
+        this.game.state != GAME_STATE.STARTED
+      ) {
+        if (this.game.state == GAME_STATE.SELECT_IMAGE) {
           this.lastSelectedImageBeforeReset = this.game.currentImage;
         }
         this.game.reset();
@@ -638,63 +641,58 @@ export default class Scene {
 
     this.delta += this.clock.getDelta();
 
+    //cap pictures each sec
+    if (this.delta > this.animationIntervall) {
+      if (this.game.state == GAME_STATE.ROLLING) {
+        this.game.currentImage = this.picker.nextImage();
 
-    //cap pictures each sec 
-    if(this.delta > this.animationIntervall) {
-     
-      if(this.game.state == GAME_STATE.ROLLING) {
+        const tex = new THREE.Texture(this.game.currentImage.image);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
 
-          this.game.currentImage = this.picker.nextImage();
-
-          const tex = new THREE.Texture(this.game.currentImage.image);
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.needsUpdate = true;
-
-          this.textureMap.map = tex;
-          this.textureMap.needsUpdate = true;
-
-          if (this.textMesh) {
-            const name = this.extractNameFromPath(this.game.currentImage.id);
-            this.textMesh.material.map = this.createLabelTexture(name);
-            this.textMesh.material.needsUpdate = true;
-          }
-        }
-     
-          this.delta = this.delta % this.animationIntervall;
-    }
-
-    //pick the last picture 
-    if(this.game.state == GAME_STATE.SELECT_IMAGE 
-      && this.lastSelectedImageBeforeReset
-    ){     
-          this.game.currentImage = this.lastSelectedImageBeforeReset;
-          const tex = new THREE.Texture(this.game.currentImage.image);
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.needsUpdate = true;
-          this.textureMap.map = tex;
-          this.textureMap.needsUpdate = true;
-
-          if (this.textMesh) {
-            const name = this.extractNameFromPath(this.game.currentImage.id);
-            this.textMesh.material.map = this.createLabelTexture(name);
-            this.textMesh.material.needsUpdate = true;
-          }
-
-          this.lastSelectedImageBeforeReset = null;
-    } 
-
-    if(
-      this.game.state == GAME_STATE.STARTED 
-      && this.startScreen) {
-        this.textureMap.map = this.startScreen;
+        this.textureMap.map = tex;
         this.textureMap.needsUpdate = true;
 
         if (this.textMesh) {
-          this.textMesh.material.map = this.createLabelTexture("");
+          const name = this.extractNameFromPath(this.game.currentImage.id);
+          this.textMesh.material.map = this.createLabelTexture(name);
           this.textMesh.material.needsUpdate = true;
         }
+      }
+
+      this.delta = this.delta % this.animationIntervall;
     }
 
+    //pick the last picture
+    if (
+      this.game.state == GAME_STATE.SELECT_IMAGE &&
+      this.lastSelectedImageBeforeReset
+    ) {
+      this.game.currentImage = this.lastSelectedImageBeforeReset;
+      const tex = new THREE.Texture(this.game.currentImage.image);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      this.textureMap.map = tex;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        const name = this.extractNameFromPath(this.game.currentImage.id);
+        this.textMesh.material.map = this.createLabelTexture(name);
+        this.textMesh.material.needsUpdate = true;
+      }
+
+      this.lastSelectedImageBeforeReset = null;
+    }
+
+    if (this.game.state == GAME_STATE.STARTED && this.startScreen) {
+      this.textureMap.map = this.startScreen;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        this.textMesh.material.map = this.createLabelTexture("");
+        this.textMesh.material.needsUpdate = true;
+      }
+    }
 
     // RENDER PASS 1: Video/UI (Layer 0)
     this.orthoCam.layers.set(0);

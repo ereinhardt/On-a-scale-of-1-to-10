@@ -29,11 +29,22 @@ async function setupCamera() {
           const stream = videoElement.srcObject;
           const videoTrack = stream ? stream.getVideoTracks()[0] : null;
 
-          if (!stream || !videoTrack || videoTrack.readyState === "ended" || videoElement.paused) {
-            if (videoTrack && videoTrack.readyState === "live" && videoElement.paused) {
+          if (
+            !stream ||
+            !videoTrack ||
+            videoTrack.readyState === "ended" ||
+            videoElement.paused
+          ) {
+            if (
+              videoTrack &&
+              videoTrack.readyState === "live" &&
+              videoElement.paused
+            ) {
               await videoElement.play();
             } else {
-              const newStream = await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
+              const newStream = await navigator.mediaDevices.getUserMedia(
+                CAMERA_OPTIONS
+              );
               videoElement.srcObject = newStream;
               await videoElement.play();
             }
@@ -45,7 +56,9 @@ async function setupCamera() {
     });
   } catch (error) {
     console.error(error);
-    alert("Camera not found. Please make sure you have a camera connected and have granted permission to use it.");
+    alert(
+      "Camera not found. Please make sure you have a camera connected and have granted permission to use it."
+    );
   }
 }
 

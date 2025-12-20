@@ -3,9 +3,10 @@
 $dataFile = __DIR__ . "/global-index.json";
 
 
-function sendResponse($message, $statuscode): never {
+function sendResponse($message, $statuscode): never
+{
     http_response_code($statuscode);
-    header('Content-Type: application/json'); 
+    header('Content-Type: application/json');
     echo json_encode(['message' => $message]);
     exit;
 }

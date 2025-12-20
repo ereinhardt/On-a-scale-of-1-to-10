@@ -17,7 +17,7 @@ $data = json_decode(file_get_contents($dataFile), true);
 $now = time();
 
 // Entferne inaktive User
-$data['users'] = array_filter($data['users'], function($timestamp) use ($now, $timeout) {
+$data['users'] = array_filter($data['users'], function ($timestamp) use ($now, $timeout) {
     return ($now - $timestamp) < $timeout;
 });
 
