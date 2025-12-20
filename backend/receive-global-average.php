@@ -91,7 +91,7 @@ function initializeDataFile(): array
 
                 $data[$imageName] = [
                     "global-average" => 0.0,
-                    "classical_average" => 0.0,
+                    "classical-average" => 0.0,
                     "deviation" => 0.0,
                     "sums" => array(),
                 ];
@@ -160,7 +160,7 @@ for ($i = 0; $i < count($data); $i++) {
         $calculated_average = $classical_average * 0.8 + $current_index * 0.2; // Gewichtung: 80% bisheriger Durchschnitt, 20% letzter Wert (current_index)
         $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
         $global_average[$current_image]["global-average"] = $unique_average;
-        $global_average[$current_image]["classical_average"] = round($classical_average, 4);
+        $global_average[$current_image]["classical-average"] = round($classical_average, 4);
         $global_average[$current_image]["deviation"] = round($unique_average - $calculated_average, 4);
     }
 }
