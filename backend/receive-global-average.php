@@ -23,8 +23,8 @@ function findUniqueAverage(float $targetAverage, array $global_average, string $
     // Sammle alle existierenden Average-Werte (außer dem aktuellen Item)
     $existingAverages = [];
     foreach ($global_average as $imageName => $imageData) {
-        if ($imageName !== $currentImage && isset($imageData['average'])) {
-            $existingAverages[strval($imageData['average'])] = true;
+        if ($imageName !== $currentImage && isset($imageData['global-average'])) {
+            $existingAverages[strval($imageData['global-average'])] = true;
         }
     }
 
@@ -90,7 +90,9 @@ function initializeDataFile(): array
                 $imageName = $items[$k];
 
                 $data[$imageName] = [
-                    "average" => 0.0,
+                    "global-average" => 0.0,
+                    "classical_average" => 0.0,
+                    "deviation" => 0.0,
                     "sums" => array(),
                 ];
             }
@@ -156,7 +158,10 @@ for ($i = 0; $i < count($data); $i++) {
     if ($count > 0) {
         $classical_average = $total_sum / $count;
         $calculated_average = $classical_average * 0.8 + $current_index * 0.2; // Gewichtung: 80% bisheriger Durchschnitt, 20% letzter Wert (current_index)
-        $global_average[$current_image]["average"] = findUniqueAverage($calculated_average, $global_average, $current_image);
+        $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
+        $global_average[$current_image]["global-average"] = $unique_average;
+        $global_average[$current_image]["classical_average"] = round($classical_average, 4);
+        $global_average[$current_image]["deviation"] = round($unique_average - $calculated_average, 4);
     }
 }
 
