@@ -48,7 +48,7 @@ canvas {
 
 #user-count {
   position: absolute;
-  color: green;
+  color: limegreen;
   top: var(--item-gap);
   left: 50%;
   transform: translateX(-50%);
