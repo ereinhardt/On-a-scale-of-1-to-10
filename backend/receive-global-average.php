@@ -28,7 +28,13 @@ function findUniqueAverage(float $targetAverage, array $global_average, string $
         }
     }
 
-    // Stufenweise feiner werden: 1 Nachkommastelle, dann 2, dann 3, dann 4
+    // Zuerst: Prüfe ob der exakte Wert (auf 4 Nachkommastellen gerundet) frei ist
+    $exactCandidate = round($targetAverage, 4);
+    if (!isset($existingAverages[strval($exactCandidate)])) {
+        return $exactCandidate;
+    }
+
+    // Stufenweise gröber werden: 1 Nachkommastelle, dann 2, dann 3, dann 4
     $precisions = [1, 2, 3, 4];
 
     foreach ($precisions as $precision) {
@@ -161,7 +167,8 @@ for ($i = 0; $i < count($data); $i++) {
         $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
         $global_average[$current_image]["global-average"] = $unique_average;
         $global_average[$current_image]["classical-average"] = round($classical_average, 4);
-        $global_average[$current_image]["deviation"] = round($unique_average - $calculated_average, 4);
+        $deviation = round($unique_average - $calculated_average, 4);
+        $global_average[$current_image]["deviation"] = $deviation == 0 ? 0.0 : $deviation; // Verhindert -0
     }
 }
 
