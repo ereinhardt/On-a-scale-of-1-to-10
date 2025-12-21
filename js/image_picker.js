@@ -54,7 +54,7 @@ export default class ImagePicker {
     const resolution = isPhone ? "256" : "512"; // Phone 256, Tablet, Desktop 512
 
     const url =
-      "item-data-test/" + currentItem[random_index].replace("**", resolution);
+      "item-data/" + currentItem[random_index].replace("**", resolution);
 
     return url;
   }

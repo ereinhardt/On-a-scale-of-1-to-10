@@ -4,7 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 $dataFile = __DIR__ . "/global-index.json";
-$indexJsonFile = __DIR__ . "/../js/indexed_json.json";
+$indexJsonFile = __DIR__ . "/../item-data/indexed_json.json";
 
 function sendResponse($message, $statuscode): never
 {
@@ -72,6 +72,27 @@ function findUniqueAverage(float $targetAverage, array $global_average, string $
     return round($targetAverage, 4);
 }
 
+function findAllItems(array $node, array &$data): void
+{
+    foreach ($node as $key => $value) {
+        if ($key === "items" && is_array($value)) {
+            // Found items array - add all image paths (basename only)
+            foreach ($value as $imagePath) {
+                $imageName = basename($imagePath);
+                $data[$imageName] = [
+                    "global-average" => 0.0,
+                    "classical-average" => 0.0,
+                    "deviation" => 0.0,
+                    "sums" => array(),
+                ];
+            }
+        } elseif (is_array($value)) {
+            // Recurse into nested arrays/objects
+            findAllItems($value, $data);
+        }
+    }
+}
+
 function initializeDataFile(): array
 {
     global $indexJsonFile;
@@ -84,26 +105,7 @@ function initializeDataFile(): array
     $indexed_data = json_decode($content, true);
     $data = [];
 
-    foreach ($indexed_data as $categoryKey => $category) {
-        foreach ($category as $underCategoryKey => $underCategory) {
-
-            if (!isset($underCategory["items"]))
-                continue;
-
-            $items = $underCategory["items"];
-
-            for ($k = 0; $k < count($items); $k++) {
-                $imageName = $items[$k];
-
-                $data[$imageName] = [
-                    "global-average" => 0.0,
-                    "classical-average" => 0.0,
-                    "deviation" => 0.0,
-                    "sums" => array(),
-                ];
-            }
-        }
-    }
+    findAllItems($indexed_data, $data);
 
     return $data;
 }
@@ -158,12 +160,22 @@ for ($i = 0; $i < count($data); $i++) {
 
 
     $sums = $global_average[$current_image]["sums"];
-    $total_sum = array_sum(array: $sums);
     $count = count($sums);
 
     if ($count > 0) {
+        // Classical average über ALLE sums (inklusive current_index)
+        $total_sum = array_sum($sums);
         $classical_average = $total_sum / $count;
-        $calculated_average = $classical_average * 0.8 + $current_index * 0.2; // Gewichtung: 80% bisheriger Durchschnitt, 20% letzter Wert (current_index)
+        
+        // Für calculated_average
+        if ($count > 1) {
+            $previous_sum = $total_sum - $current_index;
+            $previous_average = $previous_sum / ($count - 1);
+            $calculated_average = $previous_average * 0.8 + $current_index * 0.2;
+        } else {
+            $calculated_average = $current_index;
+        }
+        
         $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
         $global_average[$current_image]["global-average"] = $unique_average;
         $global_average[$current_image]["classical-average"] = round($classical_average, 4);

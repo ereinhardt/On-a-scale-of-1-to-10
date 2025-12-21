@@ -67,7 +67,7 @@ def main():
 
     parser.add_argument("--input_dir", type=pathlib.Path, required=False)
     parser.add_argument(
-        "--output_dir", type=pathlib.Path, required=False, default=pathlib.Path("./js/")
+        "--output_dir", type=pathlib.Path, required=False, default=pathlib.Path("./item-data/")
     )
     parser.add_argument(
         "--output_file_name", type=str, required=False, default="indexed_json"

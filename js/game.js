@@ -16,7 +16,8 @@ class GameSerializer {
         this.game.push({
           image: imagePath
             .replace(/(1024)|(512)|(256)/, "**")
-            .replace("item-data-test/", ""),
+            .split("/")
+            .pop(), // Only filename, no path
           index: field.index,
         });
       }
