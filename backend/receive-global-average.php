@@ -83,6 +83,7 @@ function findAllItems(array $node, array &$data): void
                     "global-average" => 0.0,
                     "classical-average" => 0.0,
                     "deviation" => 0.0,
+                    "current-index" => 0,
                     "sums" => array(),
                 ];
             }
@@ -163,22 +164,24 @@ for ($i = 0; $i < count($data); $i++) {
     $count = count($sums);
 
     if ($count > 0) {
-        // Classical average über ALLE sums (inklusive current_index)
-        $total_sum = array_sum($sums);
-        $classical_average = $total_sum / $count;
-        
-        // Für calculated_average
-        if ($count > 1) {
-            $previous_sum = $total_sum - $current_index;
-            $previous_average = $previous_sum / ($count - 1);
-            $calculated_average = $previous_average * 0.8 + $current_index * 0.2;
+        // Classical average ohne den aktuellen Wert (für die Gewichtung)
+        $previous_sum = array_sum($sums) - $current_index;
+        $previous_count = $count - 1;
+
+        if ($previous_count > 0) {
+            $classical_average_previous = $previous_sum / $previous_count;
+            $calculated_average = $classical_average_previous * 0.8 + $current_index * 0.2;
         } else {
+            // Erste Bewertung - nur der aktuelle Wert zählt
             $calculated_average = $current_index;
         }
-        
+
+        // Classical average mit allen Werten (für die Anzeige)
+        $classical_average = array_sum($sums) / $count;
         $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
         $global_average[$current_image]["global-average"] = $unique_average;
         $global_average[$current_image]["classical-average"] = round($classical_average, 4);
+        $global_average[$current_image]["current-index"] = $current_index;
         $deviation = round($unique_average - $calculated_average, 4);
         $global_average[$current_image]["deviation"] = $deviation == 0 ? 0.0 : $deviation; // Verhindert -0
     }
