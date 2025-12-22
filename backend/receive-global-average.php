@@ -135,6 +135,14 @@ if (!is_array($global_average)) {
     $global_average = initializeDataFile();
 }
 
+// Synchronisiere neue Items aus indexed_json.json
+$current_items = initializeDataFile();
+foreach ($current_items as $imageName => $defaultData) {
+    if (!isset($global_average[$imageName])) {
+        $global_average[$imageName] = $defaultData;
+    }
+}
+
 
 for ($i = 0; $i < count($data); $i++) {
     $current_item = $data[$i];
