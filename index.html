@@ -112,15 +112,50 @@
         const btn = document.getElementById("global-average-btn");
         const overlay = document.getElementById("global-average-overlay");
         let isOpen = false;
+        let inactivityTimer = null;
+        const INACTIVITY_TIMEOUT = 60000; // 1 Minute in Millisekunden
+
+        function closeOverlay() {
+          if (isOpen) {
+            isOpen = false;
+            overlay.classList.remove("open");
+            btn.textContent = "Global Average";
+            clearInactivityTimer();
+          }
+        }
+
+        function clearInactivityTimer() {
+          if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
+          }
+        }
+
+        function resetInactivityTimer() {
+          if (isOpen) {
+            clearInactivityTimer();
+            inactivityTimer = setTimeout(closeOverlay, INACTIVITY_TIMEOUT);
+          }
+        }
+
+        // Event-Listener für Aktivität (Scroll und Touch)
+        overlay.addEventListener("scroll", resetInactivityTimer);
+        overlay.addEventListener("touchstart", resetInactivityTimer);
+        overlay.addEventListener("touchmove", resetInactivityTimer);
+        window.addEventListener("scroll", function () {
+          if (isOpen) resetInactivityTimer();
+        });
 
         btn.addEventListener("click", function () {
           isOpen = !isOpen;
           if (isOpen) {
             overlay.classList.add("open");
             btn.textContent = "Return to Input";
+            resetInactivityTimer();
           } else {
             overlay.classList.remove("open");
             btn.textContent = "Global Average";
+            clearInactivityTimer();
           }
         });
       })();
