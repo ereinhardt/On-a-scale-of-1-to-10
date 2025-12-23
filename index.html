@@ -138,11 +138,15 @@
           }
         }
 
-        // Event-Listener für Aktivität (Scroll und Touch)
+        // Event-Listener für Aktivität (Scroll, Touch und Maus)
         overlay.addEventListener("scroll", resetInactivityTimer);
         overlay.addEventListener("touchstart", resetInactivityTimer);
         overlay.addEventListener("touchmove", resetInactivityTimer);
+        overlay.addEventListener("mousemove", resetInactivityTimer);
         window.addEventListener("scroll", function () {
+          if (isOpen) resetInactivityTimer();
+        });
+        window.addEventListener("mousemove", function () {
           if (isOpen) resetInactivityTimer();
         });
 
