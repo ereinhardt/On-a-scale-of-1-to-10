@@ -20,6 +20,7 @@
     <script src="./js/util.js" defer type="module"></script>
     <script src="./js/game.js" defer type="module"></script>
     <script src="./js/image_picker.js" defer type="module"></script>
+    <script src="./js/global-average-overlay.js" defer type="module"></script>
     <!-- Require the peer dependencies of face-landmarks-detection. -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
@@ -30,11 +31,6 @@
     <title>On a scale from 1 to 10</title>
   </head>
   <body>
-    <button id="global-average-btn">Global Average</button>
-    <div id="global-average-overlay">
-      <!-- <div id="user-count">Current contributors: 0</div> -->
-    </div>
-
     <div id="item-container" aria-hidden="true">
       <div class="item-box-container">
         <div class="item-box-number">1</div>
@@ -78,6 +74,13 @@
       </div>
     </div>
 
+    <button id="global-average-btn">Global Average</button>
+    <div id="global-average-overlay">
+      <!-- <div id="user-count">Current contributors: 0</div> -->
+
+      <div id="global-average-overlay-items-container" aria-hidden="true"></div>
+    </div>
+
     <script>
       (function () {
         /*
@@ -118,6 +121,7 @@
         function closeOverlay() {
           if (isOpen) {
             isOpen = false;
+            document.getElementById("item-container").style.display = "flex";
             overlay.classList.remove("open");
             btn.textContent = "Global Average";
             clearInactivityTimer();
@@ -153,10 +157,12 @@
         btn.addEventListener("click", function () {
           isOpen = !isOpen;
           if (isOpen) {
+            document.getElementById("item-container").style.display = "none";
             overlay.classList.add("open");
             btn.textContent = "Return to Input";
             resetInactivityTimer();
           } else {
+            document.getElementById("item-container").style.display = "flex";
             overlay.classList.remove("open");
             btn.textContent = "Global Average";
             clearInactivityTimer();

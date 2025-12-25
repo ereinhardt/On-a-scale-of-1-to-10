@@ -18,7 +18,7 @@ class GameSerializer {
             .replace(/(1024)|(512)|(256)/, "**")
             .split("/")
             .pop(), // Only filename, no path
-          index: field.index,
+          index: field.index + 1, // Convert 0-based to 1-based (1-10)
         });
       }
     });

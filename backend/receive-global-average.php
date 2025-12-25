@@ -18,11 +18,11 @@ if (!file_exists(filename: $indexJsonFile)) {
     sendResponse("indexed_json.json not found at: " . $indexJsonFile, 500);
 }
 
-function findUniqueAverage(float $targetAverage, array $global_average, string $currentImage): float
+function findUniqueAverage(float $targetAverage, array $items, string $currentImage): float
 {
     // Sammle alle existierenden Average-Werte (außer dem aktuellen Item)
     $existingAverages = [];
-    foreach ($global_average as $imageName => $imageData) {
+    foreach ($items as $imageName => $imageData) {
         if ($imageName !== $currentImage && isset($imageData['global-average'])) {
             $existingAverages[strval($imageData['global-average'])] = true;
         }
@@ -104,9 +104,17 @@ function initializeDataFile(): array
     }
 
     $indexed_data = json_decode($content, true);
-    $data = [];
+    $items = [];
 
-    findAllItems($indexed_data, $data);
+    findAllItems($indexed_data, $items);
+
+    $data = [
+        "total-stats" => [
+            "total-item-number" => count($items),
+            "total-sum-number" => 0
+        ],
+        "items" => $items
+    ];
 
     return $data;
 }
@@ -131,17 +139,20 @@ if (!is_array($data) || count($data) < 1) {
 
 $global_average = json_decode(file_get_contents($dataFile), true);
 
-if (!is_array($global_average)) {
+if (!is_array($global_average) || !isset($global_average['items'])) {
     $global_average = initializeDataFile();
 }
 
 // Synchronisiere neue Items aus indexed_json.json
-$current_items = initializeDataFile();
-foreach ($current_items as $imageName => $defaultData) {
-    if (!isset($global_average[$imageName])) {
-        $global_average[$imageName] = $defaultData;
+$current_data = initializeDataFile();
+foreach ($current_data['items'] as $imageName => $defaultData) {
+    if (!isset($global_average['items'][$imageName])) {
+        $global_average['items'][$imageName] = $defaultData;
     }
 }
+
+// Aktualisiere total-item-number
+$global_average['total-stats']['total-item-number'] = count($global_average['items']);
 
 
 for ($i = 0; $i < count($data); $i++) {
@@ -161,14 +172,14 @@ for ($i = 0; $i < count($data); $i++) {
     $current_index = (int) $current_index; // Ensure it's an integer
     $current_image = $current_item["image"];
 
-    if (!isset($global_average[$current_image])) {
+    if (!isset($global_average['items'][$current_image])) {
         continue;
     }
 
-    array_push($global_average[$current_image]["sums"], $current_index);
+    array_push($global_average['items'][$current_image]["sums"], $current_index);
 
 
-    $sums = $global_average[$current_image]["sums"];
+    $sums = $global_average['items'][$current_image]["sums"];
     $count = count($sums);
 
     if ($count > 0) {
@@ -186,14 +197,21 @@ for ($i = 0; $i < count($data); $i++) {
 
         // Classical average mit allen Werten (für die Anzeige)
         $classical_average = array_sum($sums) / $count;
-        $unique_average = findUniqueAverage($calculated_average, $global_average, $current_image);
-        $global_average[$current_image]["global-average"] = $unique_average;
-        $global_average[$current_image]["classical-average"] = round($classical_average, 4);
-        $global_average[$current_image]["current-index"] = $current_index;
+        $unique_average = findUniqueAverage($calculated_average, $global_average['items'], $current_image);
+        $global_average['items'][$current_image]["global-average"] = $unique_average;
+        $global_average['items'][$current_image]["classical-average"] = round($classical_average, 4);
+        $global_average['items'][$current_image]["current-index"] = $current_index;
         $deviation = round($unique_average - $calculated_average, 4);
-        $global_average[$current_image]["deviation"] = $deviation == 0 ? 0.0 : $deviation; // Verhindert -0
+        $global_average['items'][$current_image]["deviation"] = $deviation == 0 ? 0.0 : $deviation; // Verhindert -0
     }
 }
+
+// Berechne total-sum-number (Gesamtanzahl aller Bewertungen)
+$total_sum_number = 0;
+foreach ($global_average['items'] as $imageData) {
+    $total_sum_number += count($imageData['sums']);
+}
+$global_average['total-stats']['total-sum-number'] = $total_sum_number;
 
 file_put_contents($dataFile, json_encode($global_average));
 

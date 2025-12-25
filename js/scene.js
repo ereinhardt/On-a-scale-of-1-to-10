@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
-import { download_image, readJsonFile } from "./util.js";
+import { download_image, extractNameFromPath, readJsonFile } from "./util.js";
 import Game, { GAME_STATE } from "./game.js";
 import ImagePicker from "./image_picker.js";
 
@@ -477,13 +477,7 @@ export default class Scene {
     // m = 0.5m → close, m = 1.5m → far
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
-  extractNameFromPath(path) {
-    if (!path) return "";
-    const parts = path.split("__");
-    const filename = parts[parts.length - 1];
-    const name = filename.substring(0, filename.lastIndexOf("."));
-    return name.replace(/_/g, " ");
-  }
+
 
   createLabelTexture(text) {
     const canvas = document.createElement("canvas");
@@ -654,7 +648,7 @@ export default class Scene {
         this.textureMap.needsUpdate = true;
 
         if (this.textMesh) {
-          const name = this.extractNameFromPath(this.game.currentImage.id);
+          const name = extractNameFromPath(this.game.currentImage.id);
           this.textMesh.material.map = this.createLabelTexture(name);
           this.textMesh.material.needsUpdate = true;
         }
@@ -676,7 +670,7 @@ export default class Scene {
       this.textureMap.needsUpdate = true;
 
       if (this.textMesh) {
-        const name = this.extractNameFromPath(this.game.currentImage.id);
+        const name = extractNameFromPath(this.game.currentImage.id);
         this.textMesh.material.map = this.createLabelTexture(name);
         this.textMesh.material.needsUpdate = true;
       }

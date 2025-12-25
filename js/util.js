@@ -29,3 +29,13 @@ export async function download_image(path) {
     };
   });
 }
+
+export function extractNameFromPath(path) {
+    if (!path) return "";
+    const parts = path.split("__");
+    const filename = parts[parts.length - 1];
+    const name = filename.substring(0, filename.lastIndexOf("."));
+    return name.replace(/_/g, " ");
+  }
+
+export const isPhone = Math.min(window.screen.width, window.screen.height) < 768;

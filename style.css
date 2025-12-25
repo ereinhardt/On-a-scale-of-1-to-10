@@ -2,11 +2,12 @@ body {
   margin: 0;
   background-color: black;
   font-family: Helvetica, Arial, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden !important;
 }
 
 :root {
   --viewport-h: 100vh;
+  --main-font-size: 0.25; 
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --item-gap: clamp(
@@ -19,13 +20,11 @@ body {
     calc(
       (
           var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
-            (9 * var(--item-gap))
+            (11 * var(--item-gap))
         ) / 12
     )
   );
   --item-margin: var(--item-size);
-  --number-gap: 10px;
-  --left: calc(var(--item-size) + var(--item-margin));
 }
 
 @supports (height: 100dvh) {
@@ -52,15 +51,15 @@ canvas {
   top: var(--item-gap);
   left: 50%;
   transform: translateX(-50%);
-  font-size: calc(var(--item-size) * 0.3);
+  font-size: calc(var(--item-size) * var(--main-font-size));
   z-index: 10001;
   text-align: center;
 }
 
 #item-container {
   position: fixed;
-  top: calc(var(--item-margin) + var(--safe-top));
-  bottom: calc(var(--item-margin) + var(--safe-bottom));
+  top: calc(var(--item-margin) + var(--safe-top) + var(--item-gap));
+  bottom: calc(var(--item-margin) + var(--safe-bottom) + var(--item-gap));
   transform: none;
   display: flex;
   flex-direction: column;
@@ -76,7 +75,7 @@ canvas {
 
 .item-box-container {
   height: var(--item-size);
-  width: calc(var(--item-size) * 2);
+  width: calc(var(--item-size) * 2 + var(--item-gap));
   display: flex;
   flex-direction: row; /* 👈 untereinander */
   align-items: flex-end; /* 👉 rechts */
@@ -91,7 +90,7 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.3);
+  font-size: calc(var(--item-size) * 0.25);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
@@ -102,17 +101,20 @@ canvas {
 
 .item-box-number {
   width: var(--item-size);
-  aspect-ratio: 1 / 1;
+  height: var(--item-size);
   display: flex;
   position: absolute;
+  top: 0;
   bottom: 0;
-  transition: right 0.2s ease;
+  transition: right 0.2s ease, width 0.2s ease, padding-right 0.2s ease;
   right: 0;
   color: dimgrey;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.3);
+  padding-right: 0;
+  box-sizing: border-box;
+  font-size: calc(var(--item-size) * var(--main-font-size));
   font-variant-numeric: tabular-nums;
   line-height: 1;
   z-index: 1;
@@ -120,16 +122,22 @@ canvas {
 }
 
 .animate_number {
+  width: calc((var(--item-size) * 2 + var(--item-gap)) / 2);
   right: calc(var(--item-size));
+  justify-content: end;
+  padding-right: var(--item-gap);
 }
 
 .animate_number_reverse {
+  width: var(--item-size);
   right: 0;
+  justify-content: center;
+  padding-right: 0;
 }
 
 #global-average-btn {
   position: fixed;
-  font-size: calc(var(--item-size) * 0.25);
+  font-size: calc(var(--item-size) * var(--main-font-size));
   top: var(--item-gap);
   right: var(--item-gap);
   z-index: 10001;
@@ -176,4 +184,93 @@ body.state-select-image canvas {
 
 body.state-select-image .item-box {
   cursor: pointer;
+}
+
+
+#global-average-overlay-items-container {
+  position: fixed;
+  padding-top: calc(var(--item-margin) + var(--safe-top) + var(--item-gap));
+  padding-bottom: calc(var(--item-margin) + var(--safe-bottom) + var(--item-gap));
+  box-sizing: border-box;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--item-gap);
+  z-index: 9999 !important;
+  overflow-y: scroll;
+  height: 100%;
+  width: 100vw;
+
+}
+
+#global-average-overlay-items-container img {
+  width: 100%;
+  height: auto;
+}
+
+.average-item-box-container {
+  height: var(--item-size);
+  width: calc(var(--item-size) * 2 + var(--item-gap));
+  display: flex;
+  flex-direction: row; /* 👈 untereinander */
+  align-items: flex-end; /* 👉 rechts */
+  justify-content: flex-end; /* 👇 unten */
+  position: relative; /* wichtig fürs Animieren mit absolute */
+}
+
+.average-item-box {
+  width: var(--item-size);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--item-size) * var(--main-font-size));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
+  background: white;
+  border: none;
+  color: dimgrey;
+}
+
+.average-item-box-number {
+  width: calc((var(--item-size) * 2 + var(--item-gap)) / 2);
+  height: var(--item-size);
+  display: flex;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(var(--item-size));
+  color: dimgrey;
+  flex-direction: row;
+  align-items: center;
+  justify-content: end;
+  padding-right: var(--item-gap);
+  font-size: calc(var(--item-size) * var(--main-font-size));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.average-item-box-name {
+  width: calc( 100vw - var(--item-size) * 2 - var(--item-gap) * 2);
+  height: var(--item-size);
+  display: flex;
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--item-size) * 2  + var(--item-gap));
+  color: dimgrey;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  padding-left: var(--item-gap);
+  font-size: calc(var(--item-size) * var(--main-font-size));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  z-index: 1;
+  pointer-events: none;
+
 }
