@@ -1,4 +1,4 @@
-import { extractNameFromPath, isPhone, readFile, readJsonFile } from "./util.js";
+import { extractNameFromPath, isPhone, readFile, readJsonFile, repositionField } from "./util.js";
 
 const INTERVALL_MS = 1000; 
 const OVERLAY_NODE = document.getElementById('global-average-overlay-items-container');
@@ -111,6 +111,29 @@ function compareData(data, oldData) {
 }
 
 
+// Deine Loop Logik angepasst
+let fields = [];
+// startIndex lassen wir immer auf 0, da du ja immer das oberste Element nehmen willst
+const startIndex = 0; 
+
+setInterval(() => {
+    // Wichtig: getElementsByClassName ist eine "live" NodeList.
+    // Wenn wir DOM ändern, ändert sich diese Liste automatisch mit.
+    fields = document.getElementsByClassName('average-item-box-container');
+
+    // Zufälliges Ziel, aber nicht 0 (macht keinen Sinn sich selbst zu tauschen)
+    let targetIndex = Math.floor(Math.random() * fields.length);
+    if (targetIndex === 0) targetIndex = 1; // Fallback
+
+    repositionField(fields, targetIndex, startIndex);
+    
+    // Wir updaten startIndex NICHT auf targetIndex. 
+    // Du sagtest, du willst immer "Index 0 verschieben". 
+    // Nach dem DOM-Swap ist ein NEUES Element auf Index 0. Das nehmen wir beim nächsten Mal.
+}, 5000);
+
+
+
 setInterval( async() => {
     const response = await fetch('backend/send-global-average.php');
     let fullData = await response.json();
@@ -139,7 +162,10 @@ setInterval( async() => {
                 createItemBox(url, average, current_name);
             }
         }
-    }
+
+
+        //test transition 
+    } 
 
 
     first_run = false;

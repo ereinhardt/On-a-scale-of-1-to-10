@@ -111,6 +111,7 @@ function initializeDataFile(): array
     $data = [
         "total-stats" => [
             "total-item-number" => count($items),
+            "total-rated-item-number" => 0,
             "total-sum-number" => 0
         ],
         "items" => $items
@@ -206,12 +207,17 @@ for ($i = 0; $i < count($data); $i++) {
     }
 }
 
-// Berechne total-sum-number (Gesamtanzahl aller Bewertungen)
+// Berechne total-sum-number (Gesamtanzahl aller Bewertungen) und total-rated-item-number
 $total_sum_number = 0;
+$total_rated_item_number = 0;
 foreach ($global_average['items'] as $imageData) {
     $total_sum_number += count($imageData['sums']);
+    if (isset($imageData['global-average']) && $imageData['global-average'] != 0) {
+        $total_rated_item_number++;
+    }
 }
 $global_average['total-stats']['total-sum-number'] = $total_sum_number;
+$global_average['total-stats']['total-rated-item-number'] = $total_rated_item_number;
 
 file_put_contents($dataFile, json_encode($global_average));
 
