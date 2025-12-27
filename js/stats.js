@@ -1,14 +1,5 @@
 // User Count
 (function () {
-  // Check if stats should be shown
-  const showStats = localStorage.getItem("showStats") === "true";
-  const statsContainer = document.querySelector(".stats-container");
-
-  if (!showStats) {
-    if (statsContainer) statsContainer.style.display = "none";
-    return; // Exit early - no API calls
-  }
-
   // userId im sessionStorage speichern - bleibt bei Reload gleich
   let userId = sessionStorage.getItem("userId");
   if (!userId) {
@@ -17,6 +8,27 @@
   }
   const userCountApi = "./backend/user-count.php";
   const statsApi = "./backend/send-global-average.php";
+
+  // Always ping to register user (even if stats are hidden)
+  function pingUser() {
+    fetch(userCountApi + "?action=ping&userId=" + userId).catch(() => {});
+  }
+
+  pingUser();
+  setInterval(pingUser, 1000);
+
+  window.addEventListener("beforeunload", function () {
+    navigator.sendBeacon(userCountApi + "?action=leave&userId=" + userId);
+  });
+
+  // Check if stats should be shown
+  const showStats = localStorage.getItem("showStats") === "true";
+  const statsContainer = document.querySelector(".stats-container");
+
+  if (!showStats) {
+    if (statsContainer) statsContainer.style.display = "none";
+    return; // Exit early - no stats display
+  }
 
   function updateUserCount() {
     fetch(userCountApi + "?action=ping&userId=" + userId)
@@ -53,8 +65,4 @@
   updateItemStats();
   setInterval(updateUserCount, 1000);
   setInterval(updateItemStats, 25000);
-
-  window.addEventListener("beforeunload", function () {
-    navigator.sendBeacon(userCountApi + "?action=leave&userId=" + userId);
-  });
 })();
