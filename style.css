@@ -45,14 +45,21 @@ canvas {
   }
 }
 
-#user-count {
+.stats-container {
   position: absolute;
-  color: limegreen;
   top: var(--item-gap);
   left: 50%;
   transform: translateX(-50%);
-  font-size: calc(var(--item-size) * var(--main-font-size));
   z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.stats-container > div {
+  color: limegreen;
+  font-size: calc(var(--item-size) * var(--main-font-size));
   text-align: center;
 }
 

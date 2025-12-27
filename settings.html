@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>On a scale from 1 to 10 – Settings</title>
+  </head>
+  <body>
+    <h1 style="margin-top: 0">On a scale from 1 to 10 – Settings</h1>
+
+    <label>
+      <input type="checkbox" id="stats-toggle" />
+      Show Stats
+    </label>
+
+    <script>
+      const toggle = document.getElementById("stats-toggle");
+
+      // Load saved setting
+      toggle.checked = localStorage.getItem("showStats") === "true";
+
+      // Save setting on change
+      toggle.addEventListener("change", function () {
+        localStorage.setItem("showStats", this.checked);
+      });
+    </script>
+  </body>
+</html>

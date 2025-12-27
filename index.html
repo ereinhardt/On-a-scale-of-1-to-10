@@ -21,6 +21,7 @@
     <script src="./js/game.js" defer type="module"></script>
     <script src="./js/image_picker.js" defer type="module"></script>
     <script src="./js/global-average-overlay.js" defer type="module"></script>
+    <script src="./js/stats.js" defer></script>
     <!-- Require the peer dependencies of face-landmarks-detection. -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
@@ -76,41 +77,18 @@
 
     <button id="global-average-btn">⌀ Global Average</button>
     <div id="global-average-overlay">
-      <!-- <div id="user-count">Current contributors: 0</div> -->
+      <div class="stats-container">
+        <div id="user-count">Current contributors: 0</div>
+        <div id="total-item-number">Total items: 0</div>
+        <div id="total-rated-item-number">Rated items: 0</div>
+        <div id="total-sum-number">Total ratings: 0</div>
+      </div>
 
       <div id="global-average-overlay-items-container" aria-hidden="true"></div>
     </div>
 
     <script>
       (function () {
-        /*
-        // --- User Count (disabled) ---
-        // userId im sessionStorage speichern - bleibt bei Reload gleich
-        let userId = sessionStorage.getItem('userId');
-        if (!userId) {
-          userId = 'user_' + Math.random().toString(36).substr(2, 9);
-          sessionStorage.setItem('userId', userId);
-        }
-        const apiUrl = './backend/user-count.php';
-        
-        // Ping zum Registrieren/Heartbeat + Benutzerzahl holen
-        function ping() {
-          fetch(apiUrl + '?action=ping&userId=' + userId)
-            .then(response => response.json())
-            .then(data => {
-              document.getElementById('user-count').textContent = 'Current contributors: ' + data.count;
-            })
-            .catch(() => {});
-        }
-        
-        ping();
-        setInterval(ping, 1000);
-        
-        window.addEventListener('beforeunload', function() {
-          navigator.sendBeacon(apiUrl + '?action=leave&userId=' + userId);
-        });
-       */
-
         // --- Global Average Overlay ---
         const btn = document.getElementById("global-average-btn");
         const overlay = document.getElementById("global-average-overlay");
