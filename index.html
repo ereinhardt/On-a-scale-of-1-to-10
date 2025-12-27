@@ -160,6 +160,8 @@
             document.getElementById("item-container").style.display = "none";
             overlay.classList.add("open");
             btn.textContent = "× Return to Input";
+            // Scroll-Position zurücksetzen
+            document.getElementById("global-average-overlay-items-container").scrollTop = 0;
             resetInactivityTimer();
           } else {
             document.getElementById("item-container").style.display = "flex";
