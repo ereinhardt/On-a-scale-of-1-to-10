@@ -49,6 +49,9 @@ function buildImageIndex(data) {
 }
 
 function createItemBox(img, score, name, id, fadeIn = false) {
+  // Verhindere Items mit Score < 1
+  if (score < 1) return null;
+
   const item_box_container = document.createElement("div");
   item_box_container.classList.add("average-item-box-container");
   item_box_container.dataset.id = id;
@@ -101,23 +104,32 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   }
 
   if (fadeIn) {
-    void item_box_container.offsetWidth; // Reflow
-    item_box_container.style.opacity = "1";
-    item_box_container.style.maxHeight = "500px";
+    // Berechne die tatsächliche Höhe für eine flüssige Animation
+    const targetHeight = item_box_container.scrollHeight + "px";
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        item_box_container.style.opacity = "1";
+        item_box_container.style.maxHeight = targetHeight;
+      });
+    });
 
     // Nach Animation die Styles zurücksetzen
     setTimeout(() => {
       item_box_container.style.maxHeight = "";
       item_box_container.style.overflow = "";
       item_box_container.style.transition = "";
-    }, 300);
+    }, 250);
   }
 
   return item_box_container;
 }
 
 function ascendingOrderData(data) {
-  const items = Object.keys(data);
+  const items = Object.keys(data).filter((key) => {
+    const avg = data[key]["global-average"];
+    return avg >= 1; // Nur Items mit Score >= 1
+  });
   items.sort((a, b) => {
     const avgA = data[a]["global-average"];
     const avgB = data[b]["global-average"];
@@ -214,7 +226,7 @@ setInterval(async () => {
       // console.log(current_data);
 
       if (average >= 1) {
-       // console.log("Adding item to overlay:", current_name, average);
+        // console.log("Adding item to overlay:", current_name, average);
         createItemBox(url, average, current_name, current_img);
       }
 
@@ -226,10 +238,17 @@ setInterval(async () => {
     const fields = document.getElementsByClassName(
       "average-item-box-container"
     );
-    for (const field of fields) {
+    // Rückwärts iterieren um beim Entfernen keine Elemente zu überspringen
+    for (let i = fields.length - 1; i >= 0; i--) {
+      const field = fields[i];
       const id = field.dataset.id;
       if (data[id]) {
         const newScore = data[id]["global-average"];
+        // Entferne Items mit Score < 1
+        if (newScore < 1) {
+          field.remove();
+          continue;
+        }
         const oldScore = parseFloat(field.dataset.score);
         if (newScore !== oldScore) {
           field.dataset.score = newScore;
