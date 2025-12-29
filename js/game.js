@@ -82,6 +82,10 @@ export default class Game {
         const index = fields.indexOf(field);
         //console.log("Selected Field: " + index );
         if (this.state == GAME_STATE.SELECT_IMAGE && !this.board[index]) {
+          if (!this.currentImage || !this.currentImage.image) {
+            console.warn("No image selected");
+            return;
+          }
           this.placesSelected++;
 
           this.board[index] = new Field(this.currentImage, index);

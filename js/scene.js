@@ -78,7 +78,7 @@ export default class Scene {
 
   async initImagePicker() {
     this.urls = await readJsonFile(this.json_path);
-    const queue_length = Math.floor(3);
+    const queue_length = Math.floor(30);
 
     const imagePicker = new ImagePicker(this.urls, queue_length, 1);
 
@@ -646,19 +646,23 @@ export default class Scene {
     //cap pictures each sec
     if (this.delta > this.animationIntervall) {
       if (this.game.state == GAME_STATE.ROLLING) {
-        this.game.currentImage = this.picker.nextImage();
+        const nextImage = this.picker.nextImage();
 
-        const tex = new THREE.Texture(this.game.currentImage.image);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.needsUpdate = true;
+        if (nextImage && nextImage.image) {
+          this.game.currentImage = nextImage;
 
-        this.textureMap.map = tex;
-        this.textureMap.needsUpdate = true;
+          const tex = new THREE.Texture(this.game.currentImage.image);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.needsUpdate = true;
 
-        if (this.textMesh) {
-          const name = extractNameFromPath(this.game.currentImage.id);
-          this.textMesh.material.map = this.createLabelTexture(name);
-          this.textMesh.material.needsUpdate = true;
+          this.textureMap.map = tex;
+          this.textureMap.needsUpdate = true;
+
+          if (this.textMesh) {
+            const name = extractNameFromPath(this.game.currentImage.id);
+            this.textMesh.material.map = this.createLabelTexture(name);
+            this.textMesh.material.needsUpdate = true;
+          }
         }
       }
 

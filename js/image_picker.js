@@ -26,15 +26,11 @@ export default class ImagePicker {
     // Prüfe ob Item bereits im aktuellen Spiel verwendet wurde
     if (this.usedInGame.has(id)) return true;
 
-    let i = this.queue.length - 1;
-
-    while (i >= this.queue.length - this.allreadyInsertedCap) {
-      if (i < 0) break;
+    for (let i = 0; i < this.queue.length; i++) {
       let currentItem = this.queue[i];
-      i--;
-
-      if (!(currentItem instanceof ImageItem)) continue;
-      if (currentItem.id === id) return true;
+      if (currentItem instanceof ImageItem && currentItem.id === id) {
+        return true;
+      }
     }
 
     return false;
