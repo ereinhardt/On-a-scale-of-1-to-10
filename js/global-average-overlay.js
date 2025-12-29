@@ -13,41 +13,12 @@ const OVERLAY_NODE = document.getElementById(
 );
 
 let first_run = true;
-let imageHash  = {};
+let imageHash = {};
 
 // IDs von Items die gerade hinzugefügt werden (verhindert Duplikate)
 const pendingItems = new Set();
 
-function findImageRecursive(currentItem, id) {
-  // Drill-down until array
-
-  const keys = Object.keys(currentItem);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    const nextItem = currentItem[key];
-
-    if (nextItem instanceof Array) {
-      for (let j = 0; j < nextItem.length; j++) {
-        const item = nextItem[j];
-        if (item.includes(id)) {
-          return item;
-        }
-      }
-    } else if (typeof nextItem === "object") {
-      const result = findImageRecursive(nextItem, id);
-      if (result) {
-        return result;
-      }
-    }
-  }
-
-  return null;
-}
-
 async function findImage(id) {
-  //let urls = await readJsonFile("item-data/indexed_json.json");
-  //let currentItem = urls;
-  //return findImageRecursive(currentItem, id);
   return imageHash.find((str) => str.includes(id));
 }
 
@@ -55,11 +26,11 @@ function buildImageIndex(data) {
   const index = {}; // Oder new Map()
 
   function traverse(item) {
-    if (!item || typeof item !== 'object') return;
+    if (!item || typeof item !== "object") return;
 
     if (Array.isArray(item)) {
-      item.forEach(str => {
-        if (typeof str === 'string') {
+      item.forEach((str) => {
+        if (typeof str === "string") {
           // Wir speichern den String als Key für schnellen Zugriff
           // Hier musst du entscheiden: Suchst du nach exakter ID oder Teilstring?
           // Für 'includes'-Suche ist ein flaches Array besser.
@@ -206,24 +177,22 @@ function sortFieldsByOrder(desiredOrder) {
   }
 }
 
-
 let isRunning = false;
-
 
 //es kann pasieren das es so viele images gibt, dass es längert lädt als die intervallzeit
 setInterval(async () => {
   const response = await fetch("backend/send-global-average.php");
   // console.log("Fetching global average data...");
-  if(!response.ok) return;
+  if (!response.ok) return;
   let fullData = await response.json();
   let data = fullData.items || {};
-
-  
 
   if (first_run) {
     first_run = false;
     isRunning = true;
-    imageHash = buildImageIndex(await readJsonFile("item-data/indexed_json.json"));
+    imageHash = buildImageIndex(
+      await readJsonFile("item-data/indexed_json.json")
+    );
 
     // console.log("Initial load of global average overlay.");
     const images = ascendingOrderData(data);
@@ -234,8 +203,7 @@ setInterval(async () => {
       const current_data = data[current_img];
       const average = current_data["global-average"];
 
-
-      if(average < 1) continue;
+      if (average < 1) continue;
 
       const current_name = extractNameFromPath(current_img);
 
@@ -243,17 +211,16 @@ setInterval(async () => {
       const resolution = isPhone ? "256" : "512"; // Phone 256, Tablet, Desktop 512
       const url = "item-data/" + img_path.replace("**", resolution);
 
-
-       console.log(current_data);
+      // console.log(current_data);
 
       if (average >= 1) {
-        console.log("Adding item to overlay:", current_name, average);
+       // console.log("Adding item to overlay:", current_name, average);
         createItemBox(url, average, current_name, current_img);
       }
 
       isRunning = false;
     }
-  } else if(!isRunning) {
+  } else if (!isRunning) {
     isRunning = true;
     // Scores aktualisieren
     const fields = document.getElementsByClassName(
@@ -271,7 +238,6 @@ setInterval(async () => {
         }
       }
     }
-
 
     // Neue Items erkennen und hinzufügen
     const currentIds = Array.from(
@@ -304,7 +270,6 @@ setInterval(async () => {
             }
             pendingItems.delete(id);
             await delay(300);
-
           });
         });
       }
@@ -313,7 +278,5 @@ setInterval(async () => {
     // Sortieren
     sortFieldsByOrder(desiredOrder);
     isRunning = false;
-
   }
-
 }, INTERVALL_MS);

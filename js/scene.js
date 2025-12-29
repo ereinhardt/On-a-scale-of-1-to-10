@@ -92,6 +92,10 @@ export default class Scene {
 
     switch (this.game.state) {
       case GAME_STATE.STARTED:
+        // Neues Spiel startet - verwendete Items zurücksetzen
+        this.picker.resetUsedItems();
+        this.game.start_rolling();
+        break;
       case GAME_STATE.READY:
         this.game.start_rolling();
         break;
@@ -547,6 +551,10 @@ export default class Scene {
           this.lastSelectedImageBeforeReset = this.game.currentImage;
         }
         this.game.reset();
+        // Setze verwendete Items zurück für neues Spiel
+        if (this.picker) {
+          this.picker.resetUsedItems();
+        }
       }
     }
 
