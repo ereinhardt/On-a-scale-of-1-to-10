@@ -83,7 +83,7 @@ def main():
         input_dir = pathlib.Path(input_str)
 
     output_file_name = args.output_file_name
-    output_dir = args.output_dir.joinpath(output_file_name + EXTENSION)
+    output_dir = input_dir.joinpath(output_file_name + EXTENSION)
     indexed_dir = traverse_dir(input_dir, input_dir)
 
     with open(output_dir, "w+", encoding="utf-8") as f:
