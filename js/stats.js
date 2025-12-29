@@ -14,19 +14,22 @@
     fetch(userCountApi + "?action=ping&userId=" + userId).catch(() => {});
   }
 
-  pingUser();
-  setInterval(pingUser, 1000);
+  // Check if stats should be shown
+  const showStats = localStorage.getItem("showStats") === "true";
+  const statsContainer = document.querySelector(".stats-container");
+
+  // Only use pingUser if stats are hidden (otherwise updateUserCount handles it)
+  if (!showStats) {
+    pingUser();
+    setInterval(pingUser, 1000);
+    if (statsContainer) statsContainer.style.display = "none";
+  }
 
   window.addEventListener("beforeunload", function () {
     navigator.sendBeacon(userCountApi + "?action=leave&userId=" + userId);
   });
 
-  // Check if stats should be shown
-  const showStats = localStorage.getItem("showStats") === "true";
-  const statsContainer = document.querySelector(".stats-container");
-
   if (!showStats) {
-    if (statsContainer) statsContainer.style.display = "none";
     return; // Exit early - no stats display
   }
 

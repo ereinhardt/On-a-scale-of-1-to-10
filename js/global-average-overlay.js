@@ -13,6 +13,7 @@ const OVERLAY_NODE = document.getElementById(
 );
 
 let first_run = true;
+let imageHash  = {};
 
 // IDs von Items die gerade hinzugefügt werden (verhindert Duplikate)
 const pendingItems = new Set();
@@ -44,9 +45,36 @@ function findImageRecursive(currentItem, id) {
 }
 
 async function findImage(id) {
-  let urls = await readJsonFile("item-data/indexed_json.json");
-  let currentItem = urls;
-  return findImageRecursive(currentItem, id);
+  //let urls = await readJsonFile("item-data/indexed_json.json");
+  //let currentItem = urls;
+  //return findImageRecursive(currentItem, id);
+  return imageHash.find((str) => str.includes(id));
+}
+
+function buildImageIndex(data) {
+  const index = {}; // Oder new Map()
+
+  function traverse(item) {
+    if (!item || typeof item !== 'object') return;
+
+    if (Array.isArray(item)) {
+      item.forEach(str => {
+        if (typeof str === 'string') {
+          // Wir speichern den String als Key für schnellen Zugriff
+          // Hier musst du entscheiden: Suchst du nach exakter ID oder Teilstring?
+          // Für 'includes'-Suche ist ein flaches Array besser.
+          index[str] = true;
+        }
+      });
+    } else {
+      for (const key in item) {
+        traverse(item[key]);
+      }
+    }
+  }
+
+  traverse(data);
+  return Object.keys(index); // Gibt eine flache Liste aller Bilder zurück
 }
 
 function createItemBox(img, score, name, id, fadeIn = false) {
@@ -178,31 +206,55 @@ function sortFieldsByOrder(desiredOrder) {
   }
 }
 
+
+let isRunning = false;
+
+
+//es kann pasieren das es so viele images gibt, dass es längert lädt als die intervallzeit
 setInterval(async () => {
   const response = await fetch("backend/send-global-average.php");
+  // console.log("Fetching global average data...");
+  if(!response.ok) return;
   let fullData = await response.json();
   let data = fullData.items || {};
 
+  
+
   if (first_run) {
+    first_run = false;
+    isRunning = true;
+    imageHash = buildImageIndex(await readJsonFile("item-data/indexed_json.json"));
+
+    // console.log("Initial load of global average overlay.");
     const images = ascendingOrderData(data);
     const img_length = images.length;
 
     for (let i = 0; i < img_length; i++) {
       const current_img = images[i];
       const current_data = data[current_img];
+      const average = current_data["global-average"];
+
+
+      if(average < 1) continue;
+
       const current_name = extractNameFromPath(current_img);
 
       const img_path = await findImage(current_img);
       const resolution = isPhone ? "256" : "512"; // Phone 256, Tablet, Desktop 512
       const url = "item-data/" + img_path.replace("**", resolution);
 
-      const average = current_data["global-average"];
+
+       console.log(current_data);
 
       if (average >= 1) {
+        console.log("Adding item to overlay:", current_name, average);
         createItemBox(url, average, current_name, current_img);
       }
+
+      isRunning = false;
     }
-  } else {
+  } else if(!isRunning) {
+    isRunning = true;
     // Scores aktualisieren
     const fields = document.getElementsByClassName(
       "average-item-box-container"
@@ -219,6 +271,7 @@ setInterval(async () => {
         }
       }
     }
+
 
     // Neue Items erkennen und hinzufügen
     const currentIds = Array.from(
@@ -242,9 +295,16 @@ setInterval(async () => {
           const average = data[id]["global-average"];
 
           animationQueue.add(async () => {
-            createItemBox(url, average, current_name, id, true);
+            // Nochmals prüfen ob Item bereits im DOM existiert (Race-Condition verhindern)
+            const existingItem = document.querySelector(
+              `.average-item-box-container[data-id="${id}"]`
+            );
+            if (!existingItem) {
+              createItemBox(url, average, current_name, id, true);
+            }
             pendingItems.delete(id);
             await delay(300);
+
           });
         });
       }
@@ -252,7 +312,8 @@ setInterval(async () => {
 
     // Sortieren
     sortFieldsByOrder(desiredOrder);
+    isRunning = false;
+
   }
 
-  first_run = false;
 }, INTERVALL_MS);
