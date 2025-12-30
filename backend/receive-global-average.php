@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 $dataFile = __DIR__ . "/global-index.json";
 $indexJsonFile = __DIR__ . "/../item-data/indexed_json.json";

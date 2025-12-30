@@ -38,7 +38,7 @@
       .then((response) => response.json())
       .then((data) => {
         const el = document.getElementById("user-count");
-        if (el) el.textContent = "Current contributors: " + data.count;
+        if (el) el.textContent = "Current users: " + data.count;
       })
       .catch(() => {});
   }

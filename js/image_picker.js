@@ -8,7 +8,7 @@ export class ImageItem {
 }
 
 export default class ImagePicker {
-  constructor(urls, queue_length, allready_inserted_cap) {
+  constructor(urls, queue_length) {
     this.urls = urls;
     this.queue_length = queue_length;
 
@@ -17,7 +17,6 @@ export default class ImagePicker {
     }
 
     this.queue = new Array(this.queue_length).fill(0);
-    this.allreadyInsertedCap = allready_inserted_cap;
     this.cache = {};
     this.usedInGame = new Set(); // Speichert alle im aktuellen Spiel verwendeten Items
   }
@@ -25,13 +24,6 @@ export default class ImagePicker {
   allreadyInserted(id) {
     // Prüfe ob Item bereits im aktuellen Spiel verwendet wurde
     if (this.usedInGame.has(id)) return true;
-
-    for (let i = 0; i < this.queue.length; i++) {
-      let currentItem = this.queue[i];
-      if (currentItem instanceof ImageItem && currentItem.id === id) {
-        return true;
-      }
-    }
 
     return false;
   }
@@ -109,11 +101,6 @@ export default class ImagePicker {
     const random_url = this.getRandomUrl();
 
     const new_image = this.queue.shift();
-
-    // Markiere das Item als im Spiel verwendet
-    if (new_image instanceof ImageItem) {
-      this.markAsUsed(new_image.id);
-    }
 
     this.setImage(random_url, -1);
 

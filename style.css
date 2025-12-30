@@ -54,7 +54,7 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25em;
+  gap: calc(var(--item-gap) / 2);
 }
 
 .stats-container > div {
@@ -224,7 +224,6 @@ body.state-select-image .item-box {
   align-items: flex-end; /* 👉 rechts */
   justify-content: flex-end; /* 👇 unten */
   position: relative; /* wichtig fürs Animieren mit absolute */
-  transition: transform 0.25s ease;
 }
 
 .average-item-box {

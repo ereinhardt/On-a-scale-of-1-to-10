@@ -8,44 +8,24 @@ import {
 } from "./util.js";
 
 const INTERVALL_MS = 1000;
+const RESOLUTION = isPhone ? "256" : "512";
 const OVERLAY_NODE = document.getElementById(
   "global-average-overlay-items-container"
 );
 
 let first_run = true;
-let imageHash = {};
+let imageHash = [];
 
 // IDs von Items die gerade hinzugefügt werden (verhindert Duplikate)
 const pendingItems = new Set();
 
-async function findImage(id) {
-  return imageHash.find((str) => str.includes(id));
-}
-
-function buildImageIndex(data) {
-  const index = {}; // Oder new Map()
-
-  function traverse(item) {
-    if (!item || typeof item !== "object") return;
-
-    if (Array.isArray(item)) {
-      item.forEach((str) => {
-        if (typeof str === "string") {
-          // Wir speichern den String als Key für schnellen Zugriff
-          // Hier musst du entscheiden: Suchst du nach exakter ID oder Teilstring?
-          // Für 'includes'-Suche ist ein flaches Array besser.
-          index[str] = true;
-        }
-      });
-    } else {
-      for (const key in item) {
-        traverse(item[key]);
-      }
-    }
-  }
-
-  traverse(data);
-  return Object.keys(index); // Gibt eine flache Liste aller Bilder zurück
+// Flacht verschachtelte Objekte/Arrays zu einer Liste von Strings ab
+function flattenImages(data) {
+  if (typeof data === "string") return [data];
+  if (Array.isArray(data)) return data.flatMap(flattenImages);
+  if (typeof data === "object" && data)
+    return Object.values(data).flatMap(flattenImages);
+  return [];
 }
 
 function createItemBox(img, score, name, id, fadeIn = false) {
@@ -108,10 +88,8 @@ function createItemBox(img, score, name, id, fadeIn = false) {
     const targetHeight = item_box_container.scrollHeight + "px";
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        item_box_container.style.opacity = "1";
-        item_box_container.style.maxHeight = targetHeight;
-      });
+      item_box_container.style.opacity = "1";
+      item_box_container.style.maxHeight = targetHeight;
     });
 
     // Nach Animation die Styles zurücksetzen
@@ -126,17 +104,9 @@ function createItemBox(img, score, name, id, fadeIn = false) {
 }
 
 function ascendingOrderData(data) {
-  const items = Object.keys(data).filter((key) => {
-    const avg = data[key]["global-average"];
-    return avg >= 1; // Nur Items mit Score >= 1
-  });
-  items.sort((a, b) => {
-    const avgA = data[a]["global-average"];
-    const avgB = data[b]["global-average"];
-    return avgA - avgB; // Aufsteigend: 1 bis 10
-  });
-
-  return items;
+  return Object.keys(data)
+    .filter((key) => data[key]["global-average"] >= 1)
+    .sort((a, b) => data[a]["global-average"] - data[b]["global-average"]);
 }
 
 // ============================================
@@ -168,7 +138,7 @@ function sortFieldsByOrder(desiredOrder) {
           "average-item-box-container"
         );
         if (freshFields.length === 0 || i >= freshFields.length) {
-          await delay(300);
+          await delay(250);
           return;
         }
 
@@ -182,7 +152,7 @@ function sortFieldsByOrder(desiredOrder) {
         ) {
           repositionField(freshFields, i, freshFromIndex);
         }
-        await delay(300);
+        await delay(250);
       });
       return;
     }
@@ -202,36 +172,23 @@ setInterval(async () => {
   if (first_run) {
     first_run = false;
     isRunning = true;
-    imageHash = buildImageIndex(
+    imageHash = flattenImages(
       await readJsonFile("item-data/indexed_json.json")
     );
 
-    // console.log("Initial load of global average overlay.");
     const images = ascendingOrderData(data);
-    const img_length = images.length;
 
-    for (let i = 0; i < img_length; i++) {
-      const current_img = images[i];
-      const current_data = data[current_img];
-      const average = current_data["global-average"];
-
+    for (const current_img of images) {
+      const average = data[current_img]["global-average"];
       if (average < 1) continue;
 
       const current_name = extractNameFromPath(current_img);
+      const img_path = imageHash.find((str) => str.includes(current_img));
+      const url = "item-data/" + img_path.replace("**", RESOLUTION);
 
-      const img_path = await findImage(current_img);
-      const resolution = isPhone ? "256" : "512"; // Phone 256, Tablet, Desktop 512
-      const url = "item-data/" + img_path.replace("**", resolution);
-
-      // console.log(current_data);
-
-      if (average >= 1) {
-        // console.log("Adding item to overlay:", current_name, average);
-        createItemBox(url, average, current_name, current_img);
-      }
-
-      isRunning = false;
+      createItemBox(url, average, current_name, current_img);
     }
+    isRunning = false;
   } else if (!isRunning) {
     isRunning = true;
     // Scores aktualisieren
@@ -274,22 +231,14 @@ setInterval(async () => {
         pendingItems.add(id); // Markieren als "wird hinzugefügt"
 
         const current_name = extractNameFromPath(id);
-        findImage(id).then((img_path) => {
-          const resolution = isPhone ? "256" : "512";
-          const url = "item-data/" + img_path.replace("**", resolution);
-          const average = data[id]["global-average"];
+        const img_path = imageHash.find((str) => str.includes(id));
+        const url = "item-data/" + img_path.replace("**", RESOLUTION);
+        const average = data[id]["global-average"];
 
-          animationQueue.add(async () => {
-            // Nochmals prüfen ob Item bereits im DOM existiert (Race-Condition verhindern)
-            const existingItem = document.querySelector(
-              `.average-item-box-container[data-id="${id}"]`
-            );
-            if (!existingItem) {
-              createItemBox(url, average, current_name, id, true);
-            }
-            pendingItems.delete(id);
-            await delay(300);
-          });
+        animationQueue.add(async () => {
+          createItemBox(url, average, current_name, id, true);
+          pendingItems.delete(id);
+          await delay(250);
         });
       }
     }

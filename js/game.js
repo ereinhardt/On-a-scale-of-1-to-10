@@ -29,23 +29,22 @@ export class Field {
   constructor(image, index) {
     (this.image = image), (this.index = index);
   }
-
-  setImage(img) {
-    this.image = img;
-  }
 }
 
 export default class Game {
   constructor() {
     this.state = GAME_STATE.STARTED;
-    this.lastSelected = null;
     this.currentImage = null;
     this.board = [];
     this.picPerRound = 10;
     this.placesSelected = 0;
-    this.lastBoard = [];
+    this.onImagePlacedCallback = null;
     this.enable_selection();
     this.updateBodyState();
+  }
+
+  onImagePlaced(callback) {
+    this.onImagePlacedCallback = callback;
   }
 
   updateBodyState() {
@@ -83,12 +82,17 @@ export default class Game {
         //console.log("Selected Field: " + index );
         if (this.state == GAME_STATE.SELECT_IMAGE && !this.board[index]) {
           if (!this.currentImage || !this.currentImage.image) {
-            console.warn("No image selected");
+            //    console.warn("No image selected");
             return;
           }
           this.placesSelected++;
 
           this.board[index] = new Field(this.currentImage, index);
+
+          if (this.onImagePlacedCallback) {
+            this.onImagePlacedCallback(this.currentImage);
+          }
+
           const num = document.getElementsByClassName("item-box-number")[index];
 
           num.classList.remove("animate_number_reverse");
@@ -101,7 +105,7 @@ export default class Game {
               this.reset();
             }, 300);
 
-            console.log("Reset");
+            // console.log("Reset");
 
             return;
           }
@@ -126,12 +130,10 @@ export default class Game {
   async reset() {
     this.state = GAME_STATE.STARTED;
     this.updateBodyState();
-    this.lastSelected = null;
     this.currentImage = null;
     this.placesSelected = 0;
-    this.lastBoard = this.board;
 
-    console.log("BoardLength:", this.board.length);
+    // console.log("BoardLength:", this.board.length);
 
     if (this.board.length > 2) {
       await this.sendGameData();
@@ -156,7 +158,7 @@ export default class Game {
   async sendGameData() {
     const serializer = new GameSerializer(this.board);
     const gameData = JSON.stringify(serializer.game);
-    console.log("Sending game data:", gameData);
+    // console.log("Sending game data:", gameData);
     const res = await fetch("backend/receive-global-average.php", {
       method: "POST",
       headers: {
@@ -165,7 +167,7 @@ export default class Game {
       body: gameData,
     });
 
-    console.log("Response:", res);
+    // console.log("Response:", res);
 
     if (!res.ok) {
       throw new Error("Failed to send game data: " + res.statusText);
@@ -173,7 +175,6 @@ export default class Game {
   }
 
   select_image() {
-    this.lastSelected = this.currentImage;
     this.state = GAME_STATE.READY;
     this.updateBodyState();
   }

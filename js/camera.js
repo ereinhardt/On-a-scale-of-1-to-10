@@ -50,12 +50,12 @@ async function setupCamera() {
             }
           }
         } catch (e) {
-          console.error("Error resuming camera:", e);
+          //   console.error("Error resuming camera:", e);
         }
       }
     });
   } catch (error) {
-    console.error(error);
+    // console.error(error);
     alert(
       "Camera not found. Please make sure you have a camera connected and have granted permission to use it."
     );

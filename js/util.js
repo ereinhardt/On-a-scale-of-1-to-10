@@ -1,11 +1,3 @@
-export async function readFile(path) {
-  const res = await fetch(path);
-
-  if (!res.ok) throw Error("Could not found file at " + path);
-
-  return await res.text();
-}
-
 export async function readJsonFile(path) {
   const res = await fetch(path);
 
@@ -31,20 +23,17 @@ export async function download_image(path) {
 }
 
 export function extractNameFromPath(path) {
-    if (!path) return "";
-    const parts = path.split("__");
-    const filename = parts[parts.length - 1];
-    const name = filename.substring(0, filename.lastIndexOf("."));
-    return name.replace(/_/g, " ");
-  }
+  if (!path) return "";
+  const parts = path.split("__");
+  const filename = parts[parts.length - 1];
+  const name = filename.substring(0, filename.lastIndexOf("."));
+  return name.replace(/_/g, " ");
+}
 
-export const isPhone = Math.min(window.screen.width, window.screen.height) < 768;
+export const isPhone =
+  Math.min(window.screen.width, window.screen.height) < 768;
 
-export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// ============================================
-// Animation
-// ============================================
+export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function repositionField(fields, targetIndex, startIndex) {
   if (!fields || fields.length === 0) return;
@@ -59,6 +48,9 @@ export function repositionField(fields, targetIndex, startIndex) {
   const targetRect = target.getBoundingClientRect();
   const height = fieldRect.height;
 
+  // Transition per Inline-Style setzen
+  fieldsArray.forEach((f) => (f.style.transition = "transform 0.25s ease"));
+
   const deltaY = targetRect.top - fieldRect.top;
   field.style.transform = `translateY(${deltaY}px)`;
 
@@ -67,7 +59,7 @@ export function repositionField(fields, targetIndex, startIndex) {
     for (let i = startIndex + 1; i <= targetIndex; i++) {
       fieldsArray[i].style.transform = `translateY(-${height}px)`;
     }
-  } 
+  }
   // Nach oben schieben: startIndex > targetIndex
   else {
     for (let i = targetIndex; i < startIndex; i++) {
@@ -76,7 +68,7 @@ export function repositionField(fields, targetIndex, startIndex) {
   }
 
   setTimeout(() => {
-    fieldsArray.forEach(f => f.style.transition = 'none');
+    fieldsArray.forEach((f) => (f.style.transition = "none"));
 
     parent.removeChild(field);
     if (startIndex < targetIndex) {
@@ -85,10 +77,8 @@ export function repositionField(fields, targetIndex, startIndex) {
       parent.insertBefore(field, target);
     }
 
-    fieldsArray.forEach(f => f.style.transform = 'none');
-    void field.offsetWidth;
-    fieldsArray.forEach(f => f.style.transition = 'transform 0.25s ease-in-out');
-  }, 250); 
+    fieldsArray.forEach((f) => (f.style.transform = "none"));
+  }, 250);
 }
 
 // Animation Queue - Führt Animationen nacheinander aus
@@ -111,9 +101,7 @@ class AnimationQueue {
     this.isRunning = true;
     try {
       await this.queue.shift()();
-    } catch (e) {
-      console.error("Animation error:", e);
-    }
+    } catch (e) {}
     this._processNext();
   }
 }

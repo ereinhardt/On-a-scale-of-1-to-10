@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { rotation, roundWithPrecision, OneEuroFilter } from "./la.js";
+import { rotation, OneEuroFilter } from "./la.js";
 import { download_image, extractNameFromPath, readJsonFile } from "./util.js";
 import Game, { GAME_STATE } from "./game.js";
 import ImagePicker from "./image_picker.js";
@@ -80,11 +80,17 @@ export default class Scene {
     this.urls = await readJsonFile(this.json_path);
     const queue_length = Math.floor(30);
 
-    const imagePicker = new ImagePicker(this.urls, queue_length, 1);
+    const imagePicker = new ImagePicker(this.urls, queue_length);
 
     await imagePicker.init();
 
     this.picker = imagePicker;
+
+    this.game.onImagePlaced((imageItem) => {
+      if (imageItem && imageItem.id) {
+        this.picker.markAsUsed(imageItem.id);
+      }
+    });
   }
 
   onClick() {
@@ -482,7 +488,6 @@ export default class Scene {
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
 
-
   createLabelTexture(text) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -526,7 +531,7 @@ export default class Scene {
           options
         );
       } catch (error) {
-        console.warn("Face detection skipped:", error);
+        // console.warn("Face detection skipped:", error);
       }
     }
 
@@ -551,10 +556,6 @@ export default class Scene {
           this.lastSelectedImageBeforeReset = this.game.currentImage;
         }
         this.game.reset();
-        // Setze verwendete Items zurück für neues Spiel
-        if (this.picker) {
-          this.picker.resetUsedItems();
-        }
       }
     }
 
