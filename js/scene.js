@@ -498,12 +498,16 @@ export default class Scene {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (text) {
+      // Truncate text to 25 characters and add "..." if longer
+      const maxLength = 25;
+      const displayText = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+      
       const fontSize = 100;
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "dimgrey";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      ctx.fillText(displayText, canvas.width / 2, canvas.height / 2);
     }
 
     const tex = new THREE.CanvasTexture(canvas);
