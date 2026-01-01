@@ -5,8 +5,8 @@ import {
 } from "./reveal.js";
 
 // Konstanten
-export const FOR_REVEAL_PAUSE_MS = 2500; // Pause vor der Reveal-Animation (in Millisekunden)
-export const AFTER_REVEAL_PAUSE_MS = 5000; // Pause nach der Reveal-Animation (in Millisekunden)
+export const FOR_REVEAL_PAUSE_MS = 1000; // Pause vor der Reveal-Animation (in Millisekunden)
+export const AFTER_REVEAL_PAUSE_MS = 3000; // Pause nach der Reveal-Animation (in Millisekunden)
 
 export const GAME_STATE = Object.freeze({
   STARTED: 0,
@@ -23,7 +23,7 @@ function serializeBoard(board) {
       const imagePath = field.image.image.getAttribute("src");
       return {
         image: imagePath
-          .replace(/1024|512|256/, "**")
+          .replace(/__(1024|512|256)__/, "__**__")
           .split("/")
           .pop(),
         index: field.index + 1,
@@ -46,6 +46,7 @@ export default class Game {
     this.picPerRound = 10;
     this.placesSelected = 0;
     this.onImagePlacedCallback = null;
+    this.revealSequenceId = 0; // ID zur Identifikation der aktuellen Reveal-Sequenz
     this.enable_selection();
     this.updateBodyState();
   }
@@ -121,25 +122,43 @@ export default class Game {
     this.state = GAME_STATE.REVEALING;
     this.updateBodyState();
 
+    // Merke die aktuelle Sequenz-ID
+    const currentSequenceId = ++this.revealSequenceId;
+
     // Sende zuerst die Spieldaten
     if (this.board.length > 2) {
       await this.sendGameData();
     }
 
+    // Prüfe ob diese Sequenz noch gültig ist
+    if (this.revealSequenceId !== currentSequenceId) return;
+
     // Kurze Pause bevor Reveal startet
     await new Promise((resolve) => setTimeout(resolve, FOR_REVEAL_PAUSE_MS));
+
+    // Prüfe ob diese Sequenz noch gültig ist
+    if (this.revealSequenceId !== currentSequenceId) return;
 
     // Führe die Reveal-Animation durch
     await revealAnimation(this.board);
 
+    // Prüfe ob diese Sequenz noch gültig ist
+    if (this.revealSequenceId !== currentSequenceId) return;
+
     // Pause nach der Animation, bevor das Spiel zurückgesetzt wird
     await new Promise((resolve) => setTimeout(resolve, AFTER_REVEAL_PAUSE_MS));
+
+    // Prüfe ob diese Sequenz noch gültig ist
+    if (this.revealSequenceId !== currentSequenceId) return;
 
     // Nach der Animation: Reset
     this.reset();
   }
 
   async reset() {
+    // Invalidiere laufende Reveal-Sequenzen
+    this.revealSequenceId++;
+    
     this.state = GAME_STATE.STARTED;
     this.updateBodyState();
     this.currentImage = null;

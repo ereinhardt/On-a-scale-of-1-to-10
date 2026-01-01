@@ -21,51 +21,104 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
     $existingAverages = [];
     foreach ($items as $imageName => $imageData) {
         if ($imageName !== $currentImage && isset($imageData['global-average'])) {
-            $existingAverages[strval($imageData['global-average'])] = true;
+            $existingAverages[sprintf("%.4f", $imageData['global-average'])] = true;
         }
     }
 
     // Zuerst: Prüfe ob der exakte Wert (auf 4 Nachkommastellen gerundet) frei ist
     $exactCandidate = round($targetAverage, 4);
-    if (!isset($existingAverages[strval($exactCandidate)])) {
+    if (!isset($existingAverages[sprintf("%.4f", $exactCandidate)])) {
         return $exactCandidate;
     }
 
-    // Stufenweise gröber werden: 1 Nachkommastelle, dann 2, dann 3, dann 4
-    $precisions = [1, 2, 3, 4];
+    // Bestimme die Anzahl der Dezimalstellen des targetAverage
+    $targetStr = strval($targetAverage);
+    $decimalPlaces = 0;
+    if (strpos($targetStr, '.') !== false) {
+        $decimalPlaces = strlen(substr($targetStr, strpos($targetStr, '.') + 1));
+    }
+    // Begrenze auf 0-3, da wir maximal 4 Dezimalstellen haben wollen
+    $decimalPlaces = min($decimalPlaces, 3);
 
-    foreach ($precisions as $precision) {
-        $step = pow(10, -$precision); // 0.1, 0.01, 0.001, 0.0001
-        $candidate = round($targetAverage, $precision);
+    // Berechne die Schrittweite für Basiswerte basierend auf der Präzision
+    // 0 Dezimalstellen (z.B. 5) → Schritt 0.1
+    // 1 Dezimalstelle (z.B. 5.1) → Schritt 0.01
+    // 2 Dezimalstellen (z.B. 5.11) → Schritt 0.001
+    // 3 Dezimalstellen (z.B. 5.111) → Schritt 0.0001
+    $baseStep = pow(10, -($decimalPlaces + 1));
+    $basePrecision = $decimalPlaces + 1;
 
-        // Prüfe ob der gerundete Wert frei ist
-        if (!isset($existingAverages[strval($candidate)])) {
-            return $candidate;
+    // Sammle Basiswerte: ±5 Schritte um den targetAverage
+    $bases = [];
+    for ($i = -5; $i <= 5; $i++) {
+        $base = round($targetAverage + ($i * $baseStep), $basePrecision);
+        if ($base >= 1.0 && $base <= 10.0) {
+            $bases[] = $base;
         }
-
-        // Suche alternierend nach oben und unten mit dieser Präzision
-        $offset = $step;
-        $maxOffset = 10; // Maximal 10 Einheiten in jede Richtung (effektiv 90.000 möglichen Werte von 1 bis 10 mit 4 Dezimalstellen)
-
-        while ($offset <= $maxOffset) {
-            // Versuche nach oben
-            $upCandidate = round($targetAverage + $offset, $precision);
-            if ($upCandidate <= 10 && !isset($existingAverages[strval($upCandidate)])) {
-                return $upCandidate;
-            }
-
-            // Versuche nach unten
-            $downCandidate = round($targetAverage - $offset, $precision);
-            if ($downCandidate >= 1 && !isset($existingAverages[strval($downCandidate)])) {
-                return $downCandidate;
-            }
-
-            $offset += $step;
-        }
-        // Keine freie Stelle bei dieser Präzision gefunden -> nächste Präzision versuchen
     }
 
-    // Fallback (sollte nie passieren bei 90.000 möglichen Werten)
+    // Mische die Basiswerte zufällig
+    shuffle($bases);
+
+    // Für jede feinere Präzision (bis maximal 4 Dezimalstellen)
+    for ($precision = $basePrecision; $precision <= 4; $precision++) {
+        $step = pow(10, -$precision);
+        $maxDeviation = pow(10, -($precision - 1)); // Deviation bis zur nächsten gröberen Stelle
+
+        foreach ($bases as $base) {
+            // Prüfe zuerst den Basiswert selbst
+            $baseCandidate = round($base, $precision);
+            if ($baseCandidate >= 1 && $baseCandidate <= 10 && !isset($existingAverages[sprintf("%.4f", $baseCandidate)])) {
+                return $baseCandidate;
+            }
+
+            // Versuche kleine Deviationen um diesen Basiswert
+            $devOffset = $step;
+            while ($devOffset < $maxDeviation) {
+                $upCandidate = round($base + $devOffset, $precision);
+                if ($upCandidate <= 10 && !isset($existingAverages[sprintf("%.4f", $upCandidate)])) {
+                    return $upCandidate;
+                }
+                $downCandidate = round($base - $devOffset, $precision);
+                if ($downCandidate >= 1 && !isset($existingAverages[sprintf("%.4f", $downCandidate)])) {
+                    return $downCandidate;
+                }
+                $devOffset += $step;
+            }
+        }
+
+        // Für die nächste Präzision: erweitere die Basiswerte
+        $newBases = [];
+        foreach ($bases as $base) {
+            for ($i = -5; $i <= 5; $i++) {
+                $newBase = round($base + ($i * $step), $precision);
+                if ($newBase >= 1.0 && $newBase <= 10.0) {
+                    $newBases[] = $newBase;
+                }
+            }
+        }
+        $bases = array_unique($newBases);
+        shuffle($bases);
+    }
+
+    // Fallback: Suche systematisch den nächsten freien Wert ab targetAverage
+    // Alternierend nach oben und unten suchen, um möglichst nah am Zielwert zu bleiben
+    $offset = 0.0001;
+    while ($offset <= 10) {
+        $upCandidate = round($targetAverage + $offset, 4);
+        if ($upCandidate <= 10 && !isset($existingAverages[sprintf("%.4f", $upCandidate)])) {
+            return $upCandidate;
+        }
+        $downCandidate = round($targetAverage - $offset, 4);
+        if ($downCandidate >= 1 && !isset($existingAverages[sprintf("%.4f", $downCandidate)])) {
+            return $downCandidate;
+        }
+        $offset += 0.0001;
+    }
+
+    // Letzter Fallback: Sollte NIEMALS erreicht werden (90.000 mögliche Werte von 1.0000 bis 10.0000)
+    // Wenn doch, gibt es ein schwerwiegendes Problem
+    error_log("WARNUNG: Kein freier Wert gefunden für targetAverage=$targetAverage - alle 90.000 Werte belegt?!");
     return round($targetAverage, 4);
 }
 
@@ -135,7 +188,18 @@ if (!is_array($data) || count($data) < 1) {
     sendResponse("Invalid data format", 400);
 }
 
-$global_average = json_decode(file_get_contents($dataFile), true);
+// Öffne Datei mit exklusivem Lock für sichere Concurrent-Access-Behandlung
+$fileHandle = fopen($dataFile, 'c+');
+if (!$fileHandle) {
+    sendResponse("Could not open data file", 500);
+}
+if (!flock($fileHandle, LOCK_EX)) {
+    fclose($fileHandle);
+    sendResponse("Could not acquire file lock", 500);
+}
+
+$fileContent = stream_get_contents($fileHandle);
+$global_average = json_decode($fileContent, true);
 
 if (!is_array($global_average) || !isset($global_average['items'])) {
     $global_average = initializeDataFile();
@@ -216,7 +280,15 @@ foreach ($global_average['items'] as $imageData) {
 $global_average['total-stats']['total-sum-number'] = $total_sum_number;
 $global_average['total-stats']['total-rated-item-number'] = $total_rated_item_number;
 
-file_put_contents($dataFile, json_encode($global_average));
+// Schreibe Daten zurück mit aktivem Lock
+ftruncate($fileHandle, 0);
+rewind($fileHandle);
+fwrite($fileHandle, json_encode($global_average));
+fflush($fileHandle);
+
+// Lock freigeben und Datei schließen
+flock($fileHandle, LOCK_UN);
+fclose($fileHandle);
 
 sendResponse("Data received successfully", 200);
 ?>

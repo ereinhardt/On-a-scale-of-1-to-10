@@ -107,7 +107,7 @@ canvas {
 }
 
 .item-box img {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .item-box img.fade-out {
