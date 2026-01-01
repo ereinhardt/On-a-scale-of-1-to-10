@@ -1,33 +1,40 @@
+import {
+  revealAnimation,
+  resetNumberDisplays,
+  resetContainerOrder,
+} from "./reveal.js";
+
+// Konstanten
+export const FOR_REVEAL_PAUSE_MS = 2500; // Pause vor der Reveal-Animation (in Millisekunden)
+export const AFTER_REVEAL_PAUSE_MS = 5000; // Pause nach der Reveal-Animation (in Millisekunden)
+
 export const GAME_STATE = Object.freeze({
   STARTED: 0,
   READY: 1,
   ROLLING: 2,
   SELECT_IMAGE: 3,
+  REVEALING: 4,
 });
 
-class GameSerializer {
-  constructor(board) {
-    this.game = [];
-
-    board.forEach((field) => {
-      if (field && field.image && field.image.image) {
-        let imagePath = field.image.image.getAttribute("src");
-
-        this.game.push({
-          image: imagePath
-            .replace(/(1024)|(512)|(256)/, "**")
-            .split("/")
-            .pop(), // Only filename, no path
-          index: field.index + 1, // Convert 0-based to 1-based (1-10)
-        });
-      }
+function serializeBoard(board) {
+  return board
+    .filter((field) => field && field.image && field.image.image)
+    .map((field) => {
+      const imagePath = field.image.image.getAttribute("src");
+      return {
+        image: imagePath
+          .replace(/1024|512|256/, "**")
+          .split("/")
+          .pop(),
+        index: field.index + 1,
+      };
     });
-  }
 }
 
 export class Field {
   constructor(image, index) {
-    (this.image = image), (this.index = index);
+    this.image = image;
+    this.index = index;
   }
 }
 
@@ -48,41 +55,27 @@ export default class Game {
   }
 
   updateBodyState() {
-    const body = document.body;
-    body.classList.remove(
-      "state-started",
-      "state-ready",
-      "state-rolling",
-      "state-select-image"
-    );
+    const stateClasses = {
+      [GAME_STATE.STARTED]: "state-started",
+      [GAME_STATE.READY]: "state-ready",
+      [GAME_STATE.ROLLING]: "state-rolling",
+      [GAME_STATE.SELECT_IMAGE]: "state-select-image",
+      [GAME_STATE.REVEALING]: "state-revealing",
+    };
 
-    switch (this.state) {
-      case GAME_STATE.STARTED:
-        body.classList.add("state-started");
-        break;
-      case GAME_STATE.READY:
-        body.classList.add("state-ready");
-        break;
-      case GAME_STATE.ROLLING:
-        body.classList.add("state-rolling");
-        break;
-      case GAME_STATE.SELECT_IMAGE:
-        body.classList.add("state-select-image");
-        break;
-    }
+    const body = document.body;
+    body.classList.remove(...Object.values(stateClasses));
+    body.classList.add(stateClasses[this.state]);
   }
 
   enable_selection() {
-    //console.log("enable selection");
     const fields = Array.from(document.getElementsByClassName("item-box"));
     for (const field of fields) {
-      //console.log(field);
       field.addEventListener("click", (e) => {
-        const index = fields.indexOf(field);
-        //console.log("Selected Field: " + index );
+        const container = field.closest(".item-box-container");
+        const index = parseInt(container.dataset.index, 10);
         if (this.state == GAME_STATE.SELECT_IMAGE && !this.board[index]) {
           if (!this.currentImage || !this.currentImage.image) {
-            //    console.warn("No image selected");
             return;
           }
           this.placesSelected++;
@@ -93,7 +86,8 @@ export default class Game {
             this.onImagePlacedCallback(this.currentImage);
           }
 
-          const num = document.getElementsByClassName("item-box-number")[index];
+          // Finde das richtige num-Element basierend auf dem Container
+          const num = container.querySelector(".item-box-number");
 
           num.classList.remove("animate_number_reverse");
           num.classList.add("animate_number");
@@ -101,12 +95,8 @@ export default class Game {
           field.appendChild(this.currentImage.image.cloneNode());
 
           if (this.placesSelected == this.picPerRound) {
-            setTimeout(() => {
-              this.reset();
-            }, 300);
-
-            // console.log("Reset");
-
+            // Starte die Reveal-Sequenz
+            this.startRevealSequence();
             return;
           }
 
@@ -117,7 +107,6 @@ export default class Game {
   }
 
   start_rolling() {
-    this.currentImage = null;
     this.state = GAME_STATE.ROLLING;
     this.updateBodyState();
   }
@@ -127,38 +116,69 @@ export default class Game {
     this.updateBodyState();
   }
 
+  async startRevealSequence() {
+    // Wechsle zum Revealing-State
+    this.state = GAME_STATE.REVEALING;
+    this.updateBodyState();
+
+    // Sende zuerst die Spieldaten
+    if (this.board.length > 2) {
+      await this.sendGameData();
+    }
+
+    // Kurze Pause bevor Reveal startet
+    await new Promise((resolve) => setTimeout(resolve, FOR_REVEAL_PAUSE_MS));
+
+    // Führe die Reveal-Animation durch
+    await revealAnimation(this.board);
+
+    // Pause nach der Animation, bevor das Spiel zurückgesetzt wird
+    await new Promise((resolve) => setTimeout(resolve, AFTER_REVEAL_PAUSE_MS));
+
+    // Nach der Animation: Reset
+    this.reset();
+  }
+
   async reset() {
     this.state = GAME_STATE.STARTED;
     this.updateBodyState();
     this.currentImage = null;
     this.placesSelected = 0;
-
-    // console.log("BoardLength:", this.board.length);
-
-    if (this.board.length > 2) {
-      await this.sendGameData();
-    }
-
     this.board = [];
-    let i = 0;
+
     const fields = Array.from(document.getElementsByClassName("item-box"));
     const nums = Array.from(document.getElementsByClassName("item-box-number"));
 
-    for (const field of fields) {
-      if (field.firstChild && field.firstChild.nodeName === "IMG") {
+    // Erst die Animationen starten (Zahl zurück + Bild ausblenden)
+    fields.forEach((field, i) => {
+      const img = field.querySelector("img");
+      if (img) {
         nums[i].classList.remove("animate_number");
         nums[i].classList.add("animate_number_reverse");
-        field.firstChild.remove();
+        img.classList.add("fade-out");
       }
+    });
 
-      i++;
-    }
+    // Warten bis Animation fertig
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Bilder entfernen und Nummern zurücksetzen
+    fields.forEach((field) => {
+      const img = field.querySelector("img");
+      if (img) {
+        img.remove();
+      }
+    });
+
+    // Setze die DOM-Reihenfolge der Container zurück (wichtig für Event-Listener)
+    resetContainerOrder();
+
+    // Setze die Nummern-Anzeige zurück auf 1-10
+    resetNumberDisplays();
   }
 
   async sendGameData() {
-    const serializer = new GameSerializer(this.board);
-    const gameData = JSON.stringify(serializer.game);
-    // console.log("Sending game data:", gameData);
+    const gameData = JSON.stringify(serializeBoard(this.board));
     const res = await fetch("backend/receive-global-average.php", {
       method: "POST",
       headers: {
@@ -166,8 +186,6 @@ export default class Game {
       },
       body: gameData,
     });
-
-    // console.log("Response:", res);
 
     if (!res.ok) {
       throw new Error("Failed to send game data: " + res.statusText);

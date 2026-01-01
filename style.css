@@ -106,6 +106,14 @@ canvas {
   color: dimgrey;
 }
 
+.item-box img {
+  transition: opacity 0.3s ease;
+}
+
+.item-box img.fade-out {
+  opacity: 0;
+}
+
 .item-box-number {
   width: var(--item-size);
   height: var(--item-size);
@@ -191,6 +199,21 @@ body.state-select-image canvas {
 
 body.state-select-image .item-box {
   cursor: pointer;
+}
+
+/* REVEALING: Keine Interaktion während der Animation */
+body.state-revealing canvas {
+  cursor: default;
+  pointer-events: none;
+}
+
+body.state-revealing .item-box {
+  cursor: default;
+  pointer-events: none;
+}
+
+body.state-revealing #item-container {
+  pointer-events: none;
 }
 
 

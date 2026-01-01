@@ -8,6 +8,8 @@ import {
 } from "./util.js";
 
 const INTERVALL_MS = 1000;
+const ANIMATION_DURATION_MS = 250;
+const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
 const OVERLAY_NODE = document.getElementById(
   "global-average-overlay-items-container"
@@ -42,7 +44,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
     item_box_container.style.maxHeight = "0";
     item_box_container.style.overflow = "hidden";
     item_box_container.style.transition =
-      "opacity 0.25s ease-in-out, max-height 0.25s ease-in-out";
+      `opacity ${ANIMATION_DURATION_S}s ease-in-out, max-height ${ANIMATION_DURATION_S}s ease-in-out`;
   }
 
   const item_box_number = document.createElement("div");
@@ -97,7 +99,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
       item_box_container.style.maxHeight = "";
       item_box_container.style.overflow = "";
       item_box_container.style.transition = "";
-    }, 250);
+    }, ANIMATION_DURATION_MS);
   }
 
   return item_box_container;
@@ -138,7 +140,7 @@ function sortFieldsByOrder(desiredOrder) {
           "average-item-box-container"
         );
         if (freshFields.length === 0 || i >= freshFields.length) {
-          await delay(250);
+          await delay(ANIMATION_DURATION_MS);
           return;
         }
 
@@ -152,7 +154,7 @@ function sortFieldsByOrder(desiredOrder) {
         ) {
           repositionField(freshFields, i, freshFromIndex);
         }
-        await delay(250);
+        await delay(ANIMATION_DURATION_MS);
       });
       return;
     }
@@ -238,7 +240,7 @@ setInterval(async () => {
         animationQueue.add(async () => {
           createItemBox(url, average, current_name, id, true);
           pendingItems.delete(id);
-          await delay(250);
+          await delay(ANIMATION_DURATION_MS);
         });
       }
     }
