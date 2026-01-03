@@ -59,7 +59,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
 
   const item_box_name = document.createElement("div");
   item_box_name.classList.add("average-item-box-name");
-  item_box_name.innerText = name;
+  item_box_name.innerText = name.length > 50 ? name.substring(0, 50) + "..." : name;
 
   item_box.appendChild(image_element);
 
