@@ -1,5 +1,146 @@
 <?php
 
+/*
+================================================================================
+WIE DIE BEWERTUNGS-BERECHNUNG FUNKTIONIERT
+================================================================================
+
+Stell dir vor, du hast eine Klasse mit vielen Kindern, und jedes Kind soll 
+Bilder (z.B. von Essen, Ländern, oder Zahlen) mit einer Note von 1 bis 10 
+bewerten. Dieses Programm sammelt alle Bewertungen und berechnet daraus 
+einen "Durchschnitt" für jedes Bild.
+
+--------------------------------------------------------------------------------
+1. WAS WIRD GESPEICHERT?
+--------------------------------------------------------------------------------
+
+Für jedes Bild speichern wir:
+  - "sums"             → Eine Liste aller Bewertungen (z.B. [7, 8, 6, 9, 8])
+  - "classical-average"→ Der normale Durchschnitt (alle Zahlen addiert ÷ Anzahl)
+  - "global-average"   → Ein "gewichteter" Durchschnitt (erklärt unten)
+  - "deviation"        → Wie weit wir vom berechneten Wert abweichen mussten
+
+--------------------------------------------------------------------------------
+2. DIE BERECHNUNG - SCHRITT FÜR SCHRITT
+--------------------------------------------------------------------------------
+
+BEISPIEL: Pizza hat schon Bewertungen [7, 8, 6, 9] und jemand gibt jetzt eine 8.
+
+SCHRITT A: Classical Average (Normaler Durchschnitt)
+----------------------------------------------------
+  Das ist der einfache Durchschnitt, den du aus der Schule kennst:
+  
+  Alle Zahlen zusammenzählen: 7 + 8 + 6 + 9 + 8 = 38
+  Durch die Anzahl teilen:    38 ÷ 5 = 7,6
+  
+  → Classical Average = 7,6
+
+SCHRITT B: Gewichteter Durchschnitt (Global Average Basis)
+----------------------------------------------------------
+  Hier machen wir etwas Besonderes! Die neue Bewertung zählt mehr als die alten.
+  
+  Warum? Stell dir vor, ein Bild hat schon 1000 Bewertungen. Wenn jemand Neues 
+  bewertet, würde seine Meinung beim normalen Durchschnitt fast gar nicht 
+  zählen. Das wäre unfair! 
+  
+  Deshalb verwenden wir eine "Gewichtung":
+  
+  - Alter Durchschnitt (OHNE die neue Bewertung):
+     (7 + 8 + 6 + 9) = 30   →   30 ÷ 4 = 7,5
+  
+  - Gewichtete Berechnung (calculated average):
+     80% vom alten Durchschnitt + 20% von der neuen Bewertung
+     
+     = 7,5 × 0,8 + 8 × 0,2
+     = 6,0 + 1,6
+     = 7,6
+  
+  Die Formel ist also:
+  ┌──────────────────────────────────────────────────────────────┐
+  │  Neuer Wert = (Alter Durchschnitt × 0,8) + (Neue Note × 0,2) │
+  └──────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+3. EINZIGARTIGEN WERT FINDEN (findUniqueAverage)
+--------------------------------------------------------------------------------
+
+  Jetzt kommt der knifflige Teil! Jedes Bild soll einen EINZIGARTIGEN 
+  Durchschnitt haben, damit wir eine eindeutige Rangliste erstellen können.
+  
+  Das Problem: Was wenn zwei Bilder den gleichen Durchschnitt haben?
+  Beispiel: Pizza hat 7,6 und Burger hat auch 7,6
+  
+  Die Lösung: Wir suchen den nächsten freien Wert! (Wie bei einem Parkplatz)
+  
+  DIE SUCH-STRATEGIE ("BASISWERTE")
+  ────────────────────────────────────
+  Wir suchen nicht einfach der Reihe nach, sondern intelligent und zufällig,
+  damit die Ergebnisse natürlich aussehen.
+  
+  RUNDE 1: Suche mit gleicher Genauigkeit (z.B. 2 Nachkommastellen)
+  ─────────────────────────────────────────────────────────────────
+  1. Wir erstellen ~11 "Basiswerte" um den Zielwert herum (z.B. 7,55 bis 7,65).
+  2. Wir MISCHEN diese Werte zufällig.
+  3. Wir probieren jeden Wert (und seine direkten Nachbarn) aus.
+     → Ist 7,62 frei? JA? Nehmen! (OK)
+     → NEIN? Probiere 7,63, 7,61...
+  
+  RUNDE 2: Suche mit höherer Genauigkeit (3 Nachkommastellen)
+  ───────────────────────────────────────────────────────────
+  Wenn in Runde 1 alles belegt war:
+  1. Wir erweitern ALLE Basiswerte auf 3 Nachkommastellen.
+     (Aus 7,55 wird 7,545...7,555 usw.)
+  2. Das ergibt ~121 neue Werte (11 x 11).
+  3. Wir MISCHEN alle ~121 Werte zusammen in einen Topf.
+  4. Wir probieren sie der Reihe nach durch.
+  
+  RUNDE 3: Maximale Genauigkeit (4 Nachkommastellen)
+  ──────────────────────────────────────────────────
+  Das Gleiche nochmal mit 4 Nachkommastellen (121 x 11 Werte).
+  Das gibt uns 90.000 mögliche Werte zwischen 1,0000 und 10,0000!
+
+  NOTFALL-PLAN: Systematische Suche (Fallback)
+  ───────────────────────────────────────────────
+  Wenn selbst in Runde 3 (nach 121 x 11 x 11 Versuchen) nichts frei war:
+  
+  Wir hören auf mit Zufall und suchen STUR den nächsten freien Platz.
+  Wir gehen vom Zielwert (z.B. 7,6) in winzigen Schritten (0,0001) weg:
+  
+     1. 7,6001? Belegt.
+     2. 7,5999? Belegt.
+     3. 7,6002? FREI! → Nehmen.
+     
+  Irgendwann MUSS ein Platz frei sein (es gibt ja 90.000 Plätze!).
+
+  WARUM SO KOMPLIZIERT?
+  1. SCHNELLER: Wir finden schnell einen freien Wert.
+  2. NATÜRLICHER: Durch das Mischen sehen die Werte zufälliger aus.
+
+--------------------------------------------------------------------------------
+4. WAS PASSIERT BEI NEU-BEWERTUNG?
+--------------------------------------------------------------------------------
+
+  Wenn Pizza (aktuell 7,6001) neu bewertet wird:
+  
+  1. Der alte Wert (7,6001) wird "freigegeben" (zählt nicht als belegt).
+  2. Ein komplett neuer Durchschnitt wird berechnet (z.B. 7,52).
+  3. Ein neuer freier Platz für 7,52 wird gesucht.
+  
+  ACHTUNG: Der global-average kann sich also komplett ändern, nicht nur um 0,0001!
+
+--------------------------------------------------------------------------------
+5. SICHERHEIT: FILE LOCKING
+--------------------------------------------------------------------------------
+
+  Was passiert, wenn 100 Leute gleichzeitig bewerten?
+  
+  Lösung: Wir benutzen ein "Schloss" (Lock) für die Datei.
+  Das ist wie eine Toilettentür mit Schloss - nur einer darf rein!
+  Alle anderen müssen kurz warten, bis der Erste fertig geschrieben hat.
+
+================================================================================
+*/
+
 $dataFile = __DIR__ . "/global-index.json";
 $indexJsonFile = __DIR__ . "/../item-data/indexed_json.json";
 
