@@ -5,7 +5,7 @@ import {
 } from "./reveal.js";
 
 // Konstanten
-export const FOR_REVEAL_PAUSE_MS = 1000; // Pause vor der Reveal-Animation (in Millisekunden)
+export const FOR_REVEAL_PAUSE_MS = 3000; // Pause vor der Reveal-Animation (in Millisekunden)
 export const AFTER_REVEAL_PAUSE_MS = 3000; // Pause nach der Reveal-Animation (in Millisekunden)
 
 export const GAME_STATE = Object.freeze({
@@ -13,7 +13,8 @@ export const GAME_STATE = Object.freeze({
   READY: 1,
   ROLLING: 2,
   SELECT_IMAGE: 3,
-  REVEALING: 4,
+  REVEAL_PAUSE: 4,
+  REVEALING: 5,
 });
 
 function serializeBoard(board) {
@@ -61,6 +62,7 @@ export default class Game {
       [GAME_STATE.READY]: "state-ready",
       [GAME_STATE.ROLLING]: "state-rolling",
       [GAME_STATE.SELECT_IMAGE]: "state-select-image",
+      [GAME_STATE.REVEAL_PAUSE]: "state-reveal-pause",
       [GAME_STATE.REVEALING]: "state-revealing",
     };
 
@@ -118,8 +120,8 @@ export default class Game {
   }
 
   async startRevealSequence() {
-    // Wechsle zum Revealing-State
-    this.state = GAME_STATE.REVEALING;
+    // Wechsle zum Reveal-Pause-State ("Thank you for your input")
+    this.state = GAME_STATE.REVEAL_PAUSE;
     this.updateBodyState();
 
     // Merke die aktuelle Sequenz-ID
@@ -138,6 +140,10 @@ export default class Game {
 
     // Prüfe ob diese Sequenz noch gültig ist
     if (this.revealSequenceId !== currentSequenceId) return;
+
+    // Wechsle zum Revealing-State ("Reveal Global Average")
+    this.state = GAME_STATE.REVEALING;
+    this.updateBodyState();
 
     // Führe die Reveal-Animation durch
     await revealAnimation(this.board);

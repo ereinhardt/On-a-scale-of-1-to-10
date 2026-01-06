@@ -258,16 +258,30 @@ export default class Scene {
     this.headAnchor.layers.set(1);
     this.scene.add(this.headAnchor);
 
-    //download start image
+    // Download alle Start-Screen Bilder
+    const [startScreenImg, thankYouImg, revealImg] = await Promise.all([
+      download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png"),
+      download_image("start_screen/1024__8bit__Thank_you_for_your_input.png"),
+      download_image("start_screen/1024__8bit__Anime__Reveal_Global_Average.png"),
+    ]);
 
-    const startScreen = await download_image(
-      "start_screen/1024__8bit__On_a_scale_from_1_to_10.png"
-    );
+    // Start Screen Textur
+    const startTex = new THREE.Texture(startScreenImg);
+    startTex.colorSpace = THREE.SRGBColorSpace;
+    startTex.needsUpdate = true;
+    this.startScreen = startTex;
 
-    const tex = new THREE.Texture(startScreen);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.needsUpdate = true;
-    this.startScreen = tex;
+    // Thank You Textur
+    const thankYouTex = new THREE.Texture(thankYouImg);
+    thankYouTex.colorSpace = THREE.SRGBColorSpace;
+    thankYouTex.needsUpdate = true;
+    this.thankYouScreen = thankYouTex;
+
+    // Reveal Global Average Textur
+    const revealTex = new THREE.Texture(revealImg);
+    revealTex.colorSpace = THREE.SRGBColorSpace;
+    revealTex.needsUpdate = true;
+    this.revealScreen = revealTex;
 
     // Background Plane (Color, Opacity)
     const bgGeo = new THREE.PlaneGeometry(5, 5);
@@ -285,7 +299,7 @@ export default class Scene {
 
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial({
-      map: tex,
+      map: startTex,
       transparent: true,
     });
 
@@ -695,8 +709,30 @@ export default class Scene {
       this.lastSelectedImageBeforeReset = null;
     }
 
-    if (this.game.state == GAME_STATE.STARTED && this.startScreen) {
+    if (this.game.state == GAME_STATE.STARTED && this.startScreen && this.textureMap) {
       this.textureMap.map = this.startScreen;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        this.textMesh.material.map = this.createLabelTexture("");
+        this.textMesh.material.needsUpdate = true;
+      }
+    }
+
+    // REVEAL_PAUSE: "Thank you for your input" anzeigen
+    if (this.game.state == GAME_STATE.REVEAL_PAUSE && this.thankYouScreen && this.textureMap) {
+      this.textureMap.map = this.thankYouScreen;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        this.textMesh.material.map = this.createLabelTexture("");
+        this.textMesh.material.needsUpdate = true;
+      }
+    }
+
+    // REVEALING: "Reveal Global Average" anzeigen
+    if (this.game.state == GAME_STATE.REVEALING && this.revealScreen && this.textureMap) {
+      this.textureMap.map = this.revealScreen;
       this.textureMap.needsUpdate = true;
 
       if (this.textMesh) {
