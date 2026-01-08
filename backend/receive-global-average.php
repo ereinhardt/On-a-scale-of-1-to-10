@@ -77,31 +77,73 @@ SCHRITT B: Gewichteter Durchschnitt (Global Average Basis)
   Wir suchen nicht einfach der Reihe nach, sondern intelligent und zufällig,
   damit die Ergebnisse natürlich aussehen.
   
-  RUNDE 1: Suche mit gleicher Genauigkeit (z.B. 2 Nachkommastellen)
-  ─────────────────────────────────────────────────────────────────
-  1. Wir erstellen ~11 "Basiswerte" um den Zielwert herum (z.B. 7,55 bis 7,65).
-  2. Wir MISCHEN diese Werte zufällig.
-  3. Wir probieren jeden Wert (und seine direkten Nachbarn) aus.
-     → Ist 7,62 frei? JA? Nehmen! (OK)
-     → NEIN? Probiere 7,63, 7,61...
+  RUNDE 1: Suche mit 1 Dezimalstelle
+  ───────────────────────────────────
+  Egal welchen targetAverage wir haben, wir starten IMMER mit 1 Dezimalstelle.
   
-  RUNDE 2: Suche mit höherer Genauigkeit (3 Nachkommastellen)
-  ───────────────────────────────────────────────────────────
+  1. Wir erstellen ~11 "Basiswerte" um den Zielwert herum.
+     Beispiel bei targetAverage=1,0: Basiswerte sind 1,0, 1,1, 1,2, 1,3, 1,4, 1,5
+     (0,5 bis 0,9 werden ignoriert, da < 1,0)
+     
+  2. Wir MISCHEN diese Basiswerte zufällig.
+  
+  3. ALLE diese Basiswerte sind mögliche Kandidaten.
+     Sie werden gemischt probiert, z.B.: 1,3 → 1,1 → 1,5 → 1,2 → 1,4 → 1,0
+     → Ist 1,3 frei? JA? Nehmen! (Fertig!)
+     → NEIN? Probiere 1,1 usw.
+  
+  RUNDE 2: Verfeinerung auf 2 Dezimalstellen
+  ──────────────────────────────────────────
   Wenn in Runde 1 alles belegt war:
-  1. Wir erweitern ALLE Basiswerte auf 3 Nachkommastellen.
-     (Aus 7,55 wird 7,545...7,555 usw.)
-  2. Das ergibt ~121 neue Werte (11 x 11).
-  3. Wir MISCHEN alle ~121 Werte zusammen in einen Topf.
-  4. Wir probieren sie der Reihe nach durch.
   
-  RUNDE 3: Maximale Genauigkeit (4 Nachkommastellen)
-  ──────────────────────────────────────────────────
-  Das Gleiche nochmal mit 4 Nachkommastellen (121 x 11 Werte).
+  1. Wir erweitern JEDEN Basiswert aus Runde 1 um ±5 Schritte (0,01).
+     Beispiel: Aus 1,0 werden: 0,95, 0,96, 0,97, 0,98, 0,99, 1,00, 1,01, 1,02, 1,03, 1,04, 1,05
+     Beispiel: Aus 1,1 werden: 1,05, 1,06, 1,07, 1,08, 1,09, 1,10, 1,11, 1,12, 1,13, 1,14, 1,15
+     Beispiel: Aus 1,2 werden: 1,15, 1,16, 1,17, 1,18, 1,19, 1,20, 1,21, 1,22, 1,23, 1,24, 1,25
+     Beispiel: Aus 1,3 werden: 1,25, 1,26, 1,27, 1,28, 1,29, 1,30, 1,31, 1,32, 1,33, 1,34, 1,35
+     Beispiel: Aus 1,4 werden: 1,35, 1,36, 1,37, 1,38, 1,39, 1,40, 1,41, 1,42, 1,43, 1,44, 1,45
+     Beispiel: Aus 1,5 werden: 1,45, 1,46, 1,47, 1,48, 1,49, 1,50, 1,51, 1,52, 1,53, 1,54, 1,55
+     
+  2. ALLE diese Werte werden in einen großen Pool geworfen und zusammen gemischt.
+     (Duplikate werden entfernt, z.B. 1,05 kommt nur einmal vor)
+     Das ergibt ca. 50-100 Kandidaten.
+     
+  3. Wir probieren ALLE zufällig durchgemischt:
+     z.B.: 1,17 → 1,03 → 1,28 → 1,14 → 1,21 → ...
+     Kein fester Ablauf wie "erst 1,01, dann 1,02" - alles zufällig!
+  
+  RUNDE 3: Verfeinerung auf 3 Dezimalstellen
+  ──────────────────────────────────────────
+  Wenn in Runde 2 alles belegt war:
+  
+  Die Basiswerte aus Runde 2 werden wieder erweitert (±5 × 0,001).
+  Die Basiswerte aus Runde 2 waren: 0,95, 0,96, 0,97, ..., 1,00, 1,01, 1,02, 1,03, ..., 1,54, 1,55 (in 0,01-Schritten)
+  
+  Beispiel: Aus 1,00 werden: 0,995, 0,996, 0,997, 0,998, 0,999, 1,000, 1,001, 1,002, 1,003, 1,004, 1,005
+  Beispiel: Aus 1,01 werden: 1,005, 1,006, 1,007, 1,008, 1,009, 1,010, 1,011, 1,012, 1,013, 1,014, 1,015
+  Beispiel: Aus 1,02 werden: 1,015, 1,016, 1,017, 1,018, 1,019, 1,020, 1,021, 1,022, 1,023, 1,024, 1,025
+  ... (das gleiche für 1,03, 1,04, 1,05, ... bis 1,55)
+  
+  Alle diese Werte werden gesammelt, gemischt und zufällig probiert.
+  
+  RUNDE 4: Maximale Genauigkeit (4 Dezimalstellen)
+  ────────────────────────────────────────────────
+  Die Basiswerte aus Runde 3 werden wieder erweitert (±5 × 0,0001).
+  Die Basiswerte aus Runde 3 waren: 0,995, 0,996, 0,997, ..., 1,000, 1,001, 1,002, ... bis 1,555 (in 0,001-Schritten)
+  
+  Beispiel: Aus 1,000 werden: 0,9995, 0,9996, 0,9997, 0,9998, 0,9999, 1,0000, 1,0001, 1,0002, 1,0003, 1,0004, 1,0005
+  Beispiel: Aus 1,001 werden: 1,0005, 1,0006, 1,0007, 1,0008, 1,0009, 1,0010, 1,0011, 1,0012, 1,0013, 1,0014, 1,0015
+  Beispiel: Aus 1,010 werden: 1,0095, 1,0096, 1,0097, 1,0098, 1,0099, 1,0100, 1,0101, 1,0102, 1,0103, 1,0104, 1,0105
+  Beispiel: Aus 1,555 werden: 1,5545, 1,5546, 1,5547, 1,5548, 1,5549, 1,5550, 1,5551, 1,5552, 1,5553, 1,5554, 1,5555
+  ... (das gleiche für alle Basiswerte in 0,001-Schritten)
+  
+  Die höchsten Basiswerte gehen also bis 1,5555!
   Das gibt uns 90.000 mögliche Werte zwischen 1,0000 und 10,0000!
+  Alle werden gesammelt, gemischt und zufällig probiert.
 
   NOTFALL-PLAN: Systematische Suche (Fallback)
   ───────────────────────────────────────────────
-  Wenn selbst in Runde 3 (nach 121 x 11 x 11 Versuchen) nichts frei war:
+  Wenn selbst in Runde 4 (nach 121 x 11 x 11 Versuchen) nichts frei war:
   
   Wir hören auf mit Zufall und suchen STUR den nächsten freien Platz.
   Wir gehen vom Zielwert (z.B. 7,6) in winzigen Schritten (0,0001) weg:
@@ -172,22 +214,9 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
         return $exactCandidate;
     }
 
-    // Bestimme die Anzahl der Dezimalstellen des targetAverage
-    $targetStr = strval($targetAverage);
-    $decimalPlaces = 0;
-    if (strpos($targetStr, '.') !== false) {
-        $decimalPlaces = strlen(substr($targetStr, strpos($targetStr, '.') + 1));
-    }
-    // Begrenze auf 0-3, da wir maximal 4 Dezimalstellen haben wollen
-    $decimalPlaces = min($decimalPlaces, 3);
-
-    // Berechne die Schrittweite für Basiswerte basierend auf der Präzision
-    // 0 Dezimalstellen (z.B. 5) → Schritt 0.1
-    // 1 Dezimalstelle (z.B. 5.1) → Schritt 0.01
-    // 2 Dezimalstellen (z.B. 5.11) → Schritt 0.001
-    // 3 Dezimalstellen (z.B. 5.111) → Schritt 0.0001
-    $baseStep = pow(10, -($decimalPlaces + 1));
-    $basePrecision = $decimalPlaces + 1;
+    // Starte IMMER mit 1 Dezimalstelle, unabhängig vom targetAverage
+    $basePrecision = 1;
+    $baseStep = 0.1; // Schrittweite für 1 Dezimalstelle
 
     // Sammle Basiswerte: ±5 Schritte um den targetAverage
     $bases = [];
@@ -204,35 +233,51 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
     // Für jede feinere Präzision (bis maximal 4 Dezimalstellen)
     for ($precision = $basePrecision; $precision <= 4; $precision++) {
         $step = pow(10, -$precision);
-        $maxDeviation = pow(10, -($precision - 1)); // Deviation bis zur nächsten gröberen Stelle
 
+        // Generiere ALLE möglichen Kandidaten für diese Präzision
+        $allCandidates = [];
+        
         foreach ($bases as $base) {
-            // Prüfe zuerst den Basiswert selbst
+            // Füge den Basiswert selbst hinzu
             $baseCandidate = round($base, $precision);
-            if ($baseCandidate >= 1 && $baseCandidate <= 10 && !isset($existingAverages[sprintf("%.4f", $baseCandidate)])) {
-                return $baseCandidate;
+            if ($baseCandidate >= 1 && $baseCandidate <= 10) {
+                $allCandidates[] = $baseCandidate;
             }
 
-            // Versuche kleine Deviationen um diesen Basiswert
-            $devOffset = $step;
-            while ($devOffset < $maxDeviation) {
-                $upCandidate = round($base + $devOffset, $precision);
-                if ($upCandidate <= 10 && !isset($existingAverages[sprintf("%.4f", $upCandidate)])) {
-                    return $upCandidate;
+            // In Runde 1: Nur Basiswerte, keine Deviation!
+            // Ab Runde 2: Erweitere jeden Basiswert um ±5 Schritte
+            if ($precision > 1) {
+                for ($i = 1; $i <= 5; $i++) {
+                    $upCandidate = round($base + ($i * $step), $precision);
+                    if ($upCandidate >= 1 && $upCandidate <= 10) {
+                        $allCandidates[] = $upCandidate;
+                    }
+                    $downCandidate = round($base - ($i * $step), $precision);
+                    if ($downCandidate >= 1 && $downCandidate <= 10) {
+                        $allCandidates[] = $downCandidate;
+                    }
                 }
-                $downCandidate = round($base - $devOffset, $precision);
-                if ($downCandidate >= 1 && !isset($existingAverages[sprintf("%.4f", $downCandidate)])) {
-                    return $downCandidate;
-                }
-                $devOffset += $step;
+            }
+        }
+
+        // Entferne Duplikate und mische alle Kandidaten zufällig
+        $allCandidates = array_unique($allCandidates);
+        shuffle($allCandidates);
+
+        // Probiere alle Kandidaten in zufälliger Reihenfolge
+        foreach ($allCandidates as $candidate) {
+            if (!isset($existingAverages[sprintf("%.4f", $candidate)])) {
+                return $candidate;
             }
         }
 
         // Für die nächste Präzision: erweitere die Basiswerte
+        // Verwende die NÄCHSTKLEINERE Schrittweite (nächste Präzision)
         $newBases = [];
+        $nextStep = pow(10, -($precision + 1));
         foreach ($bases as $base) {
             for ($i = -5; $i <= 5; $i++) {
-                $newBase = round($base + ($i * $step), $precision);
+                $newBase = round($base + ($i * $nextStep), $precision + 1);
                 if ($newBase >= 1.0 && $newBase <= 10.0) {
                     $newBases[] = $newBase;
                 }
