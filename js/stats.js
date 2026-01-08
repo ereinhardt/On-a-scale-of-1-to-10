@@ -67,5 +67,5 @@
   updateUserCount();
   updateItemStats();
   setInterval(updateUserCount, 1000);
-  setInterval(updateItemStats, 25000);
+  setInterval(updateItemStats, 10000);
 })();

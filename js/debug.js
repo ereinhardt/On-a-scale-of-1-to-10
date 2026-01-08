@@ -51,22 +51,20 @@ function isFatalError(error) {
 }
 
 function handleFatalError(error, source = "unknown") {
-  console.error(`[Debug] Fataler Fehler erkannt (${source}):`, error);
+  console.error(`Fatal error detected (${source}):`, error);
 
   const reloadCount = getReloadCount();
 
   if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
     console.error(
-      `[Debug] Maximale Reload-Versuche (${MAX_RELOAD_ATTEMPTS}) erreicht. Bitte manuell neuladen.`
+      `Maximum reload attempts (${MAX_RELOAD_ATTEMPTS}) reached. Please reload manually.`
     );
     clearReloadCount();
     return;
   }
 
   const newCount = incrementReloadCount();
-  console.log(
-    `[Debug] Automatisches Neuladen... (Versuch ${newCount}/${MAX_RELOAD_ATTEMPTS})`
-  );
+  console.log(`Auto-reloading... (Attempt ${newCount}/${MAX_RELOAD_ATTEMPTS})`);
 
   setTimeout(() => {
     location.reload();
@@ -92,10 +90,36 @@ window.addEventListener("load", () => {
   // Warte kurz um sicherzustellen, dass alles initialisiert ist
   setTimeout(() => {
     clearReloadCount();
-    console.log(
-      "[Debug] Seite erfolgreich geladen, Reload-Zähler zurückgesetzt."
-    );
+    console.log("Page loaded successfully, reload counter reset.");
   }, 3000);
 });
+
+// Automatisches Neuladen um Mitternacht (00:00 User-Zeit)
+function scheduleAutoReloadAtMidnight() {
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0); // 00:00 (midnight)
+
+  // Wenn die Zeit bereits vorbei ist, nimm nächsten Tag
+  if (midnight.getTime() <= now.getTime()) {
+    midnight.setDate(midnight.getDate() + 1);
+  }
+
+  const timeUntilMidnight = midnight.getTime() - now.getTime();
+
+  console.log(
+    `Auto-reload at midnight scheduled in ${Math.round(
+      timeUntilMidnight / 1000 / 60
+    )} minutes`
+  );
+
+  setTimeout(() => {
+    console.log("Midnight reached - reloading page...");
+    location.reload();
+  }, timeUntilMidnight);
+}
+
+// Starte Mitternacht-Timer wenn Seite geladen wird
+scheduleAutoReloadAtMidnight();
 
 export { handleFatalError, isFatalError };
