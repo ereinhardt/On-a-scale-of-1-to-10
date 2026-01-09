@@ -25,6 +25,6 @@ Example: 1024__8bit__Food__Apple.png
 
 ### 3. create-indexed-json.py:<br>
 
-## Start (How to?) Software
+## Start
 
 Upload to your Webserver. 
