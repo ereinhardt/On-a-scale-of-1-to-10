@@ -28,3 +28,7 @@ Example: 1024__8bit__Food__Apple.png
 ## Start
 
 Upload to your Webserver. 
+
+## Known Bugs (TODO):
+
+–No Bugs know–
