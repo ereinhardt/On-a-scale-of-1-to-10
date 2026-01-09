@@ -15,15 +15,12 @@ def create_scale_variations(directory):
     print(f"Processing images in: {directory}")
 
     count = 0
-    # Iterate through all files in the directory
     for filename in os.listdir(directory):
         # Process only PNG files
         if filename.lower().endswith(".png"):
-            # Skip if it's already a variation (contains 512 or 256)
             if "__512__8bit__" in filename or "__256__8bit__" in filename:
                 continue
 
-            # Determine pattern to replace
             if "__1024__8bit__" in filename:
                 pattern = "__1024__8bit__"
             elif "__8bit__" in filename:
@@ -41,15 +38,12 @@ def create_scale_variations(directory):
                     else:
                         resample_method = Image.LANCZOS
 
-                    # Define target sizes
                     target_sizes = [512, 256]
 
                     for size in target_sizes:
-                        # Create new filename
                         if pattern == "__1024__8bit__":
                             new_filename = filename.replace(pattern, f"__{size}__8bit__")
                         else:
-                            # Insert size before 8bit
                             new_filename = filename.replace(pattern, f"__{size}__8bit__")
 
                         new_path = os.path.join(directory, new_filename)
@@ -61,7 +55,7 @@ def create_scale_variations(directory):
                         # Resize
                         resized_img = img.resize((size, size), resample_method)
                         
-                        # Save the new image
+                        # Save the resized image
                         resized_img.save(new_path, format="PNG")
                         
                         print(f"{action}: {new_filename} ({size}x{size}) from {filename}")
@@ -73,7 +67,6 @@ def create_scale_variations(directory):
     print(f"Completed. {count} images were processed.")
 
 if __name__ == "__main__":
-    # Path can be passed as an argument or requested via input
     if len(sys.argv) > 1:
         target_dir = sys.argv[1]
     else:

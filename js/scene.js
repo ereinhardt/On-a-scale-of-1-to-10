@@ -66,7 +66,6 @@ export default class Scene {
     this.renderer.setAnimationLoop(this.animate.bind(this));
   }
 
-  // FACE MESH INIT
   async initFaceDetection() {
     const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
     const config = {
@@ -98,7 +97,7 @@ export default class Scene {
 
     switch (this.game.state) {
       case GAME_STATE.STARTED:
-        // Neues Spiel startet - verwendete Items zurücksetzen
+        // New game starts - reset used items
         this.picker.resetUsedItems();
         this.game.start_rolling();
         break;
@@ -118,7 +117,7 @@ export default class Scene {
       .addEventListener("click", this.onClick.bind(this));
   }
 
-  // 1) ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
+  // ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
   createOrthoCamera() {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -136,7 +135,7 @@ export default class Scene {
     this.orthoCam.layers.enable(0); // Layer0 = Video/UI
   }
 
-  // 2) PERSPECTIVE CAMERA – 3D FACE ROTATION
+  // PERSPECTIVE CAMERA – 3D FACE ROTATION
   createPerspectiveCamera() {
     this.perspCam = new THREE.PerspectiveCamera(
       40,
@@ -195,7 +194,6 @@ export default class Scene {
     // Mirror horizontally to match webcam mirror.
     this.video_mesh.scale.set(-scaledW, scaledH, 1);
 
-    // Keep track for coordinate conversion
     this._videoScaledW = Math.abs(scaledW);
     this._videoScaledH = scaledH;
     this._videoLeft = (sw - this._videoScaledW) / 2;
@@ -216,7 +214,6 @@ export default class Scene {
 
     let baseFovRad;
     if (vh < vw) {
-      // Landscape video: Vertical is short side
       baseFovRad = (SENSOR_FOV * Math.PI) / 180;
     } else {
       // Portrait video: Vertical is long side
@@ -258,16 +255,32 @@ export default class Scene {
     this.headAnchor.layers.set(1);
     this.scene.add(this.headAnchor);
 
-    //download start image
+    // Download all start screen images
+    const [startScreenImg, thankYouImg, revealImg] = await Promise.all([
+      download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png"),
+      download_image("start_screen/1024__8bit__Thank_you_for_your_input.png"),
+      download_image(
+        "start_screen/1024__8bit__Anime__Reveal_Global_Average.png"
+      ),
+    ]);
 
-    const startScreen = await download_image(
-      "start_screen/1024__8bit__On_a_scale_from_1_to_10.png"
-    );
+    // Start screen texture
+    const startTex = new THREE.Texture(startScreenImg);
+    startTex.colorSpace = THREE.SRGBColorSpace;
+    startTex.needsUpdate = true;
+    this.startScreen = startTex;
 
-    const tex = new THREE.Texture(startScreen);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.needsUpdate = true;
-    this.startScreen = tex;
+    // Thank you texture
+    const thankYouTex = new THREE.Texture(thankYouImg);
+    thankYouTex.colorSpace = THREE.SRGBColorSpace;
+    thankYouTex.needsUpdate = true;
+    this.thankYouScreen = thankYouTex;
+
+    // Reveal global average texture
+    const revealTex = new THREE.Texture(revealImg);
+    revealTex.colorSpace = THREE.SRGBColorSpace;
+    revealTex.needsUpdate = true;
+    this.revealScreen = revealTex;
 
     // Background Plane (Color, Opacity)
     const bgGeo = new THREE.PlaneGeometry(5, 5);
@@ -278,14 +291,14 @@ export default class Scene {
       depthWrite: false, // Prevents z-fighting
     });
     this.bgMesh = new THREE.Mesh(bgGeo, bgMat);
-    this.bgMesh.position.set(0, 5, 0); // Tiny offset to avoid z-fighting, minimal parallax
-    this.bgMesh.renderOrder = -1; // Render behind using render order instead
+    this.bgMesh.position.set(0, 5, 0);
+    this.bgMesh.renderOrder = -1;
     this.bgMesh.layers.set(1);
     this.headAnchor.add(this.bgMesh);
 
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial({
-      map: tex,
+      map: startTex,
       transparent: true,
     });
 
@@ -305,10 +318,10 @@ export default class Scene {
       map: this.createLabelTexture(""),
       transparent: true,
       side: THREE.DoubleSide,
-      depthWrite: false, // Prevents z-fighting with box3D
+      depthWrite: false,
     });
     this.textMesh = new THREE.Mesh(labelGeo, labelMat);
-    this.textMesh.position.set(0, 7.9, 0); // Textdistance to box3D – 10 more far
+    this.textMesh.position.set(0, 7.9, 0); // Text distance to box3D – 10 more far
     this.textMesh.renderOrder = 1; // Render after box3D
     this.textMesh.layers.set(1);
     this.headAnchor.add(this.textMesh);
@@ -364,7 +377,6 @@ export default class Scene {
 
     if (!vw || !vh || !this._videoScaledW) return false;
 
-    // Get face center in video pixel space
     const faceCenterX = box.xMin + box.width / 2;
     const faceCenterY = box.yMin + box.height / 2;
 
@@ -372,7 +384,7 @@ export default class Scene {
     const canvasPos = this.videoPixelToCanvasPixel(faceCenterX, faceCenterY);
 
     // Check if face center is within the visible screen area
-    const margin = 0; // Could add some margin if needed
+    const margin = 0;
     const inViewport =
       canvasPos.x >= -margin &&
       canvasPos.x <= this._screenW + margin &&
@@ -384,7 +396,6 @@ export default class Scene {
 
   // map video pixel coords (px,py) -> canvas pixel coords
   videoPixelToCanvasPixel(px, py) {
-    // px,py are in video pixel space (0..videoWidth, 0..videoHeight)
     const vw = this.video_stream.videoWidth;
     const vh = this.video_stream.videoHeight;
     if (!vw || !vh || !this._videoScaledW) return { x: 0, y: 0 };
@@ -500,8 +511,9 @@ export default class Scene {
     if (text) {
       // Truncate text to 25 characters and add "..." if longer
       const maxLength = 25;
-      const displayText = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
-      
+      const displayText =
+        text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+
       const fontSize = 100;
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "dimgrey";
@@ -695,8 +707,42 @@ export default class Scene {
       this.lastSelectedImageBeforeReset = null;
     }
 
-    if (this.game.state == GAME_STATE.STARTED && this.startScreen) {
+    if (
+      this.game.state == GAME_STATE.STARTED &&
+      this.startScreen &&
+      this.textureMap
+    ) {
       this.textureMap.map = this.startScreen;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        this.textMesh.material.map = this.createLabelTexture("");
+        this.textMesh.material.needsUpdate = true;
+      }
+    }
+
+    // REVEAL_PAUSE: Display "Thank you for your input"
+    if (
+      this.game.state == GAME_STATE.REVEAL_PAUSE &&
+      this.thankYouScreen &&
+      this.textureMap
+    ) {
+      this.textureMap.map = this.thankYouScreen;
+      this.textureMap.needsUpdate = true;
+
+      if (this.textMesh) {
+        this.textMesh.material.map = this.createLabelTexture("");
+        this.textMesh.material.needsUpdate = true;
+      }
+    }
+
+    // REVEALING: Display "Reveal Global Average"
+    if (
+      this.game.state == GAME_STATE.REVEALING &&
+      this.revealScreen &&
+      this.textureMap
+    ) {
+      this.textureMap.map = this.revealScreen;
       this.textureMap.needsUpdate = true;
 
       if (this.textMesh) {

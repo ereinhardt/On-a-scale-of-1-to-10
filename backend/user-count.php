@@ -4,19 +4,19 @@ $action = $_GET['action'] ?? 'count';
 $userId = $_GET['userId'] ?? null;
 $timeout = 5;
 
-// Initialisiere Datei falls nicht vorhanden
+// Initialize file if it does not exist
 if (!file_exists($dataFile)) {
     file_put_contents($dataFile, json_encode(['users' => []]));
 }
 
-// JSON Modus für ping/leave/count
+// JSON mode for ping/leave/count
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 $data = json_decode(file_get_contents($dataFile), true);
 $now = time();
 
-// Entferne inaktive User
+// Remove inactive users
 $data['users'] = array_filter($data['users'], function ($timestamp) use ($now, $timeout) {
     return ($now - $timestamp) < $timeout;
 });

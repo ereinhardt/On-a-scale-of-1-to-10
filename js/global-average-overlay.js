@@ -8,6 +8,8 @@ import {
 } from "./util.js";
 
 const INTERVALL_MS = 1000;
+const ANIMATION_DURATION_MS = 250;
+const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
 const OVERLAY_NODE = document.getElementById(
   "global-average-overlay-items-container"
@@ -16,10 +18,10 @@ const OVERLAY_NODE = document.getElementById(
 let first_run = true;
 let imageHash = [];
 
-// IDs von Items die gerade hinzugefügt werden (verhindert Duplikate)
+// IDs of items currently being added (prevents duplicates)
 const pendingItems = new Set();
 
-// Flacht verschachtelte Objekte/Arrays zu einer Liste von Strings ab
+// Flattens nested objects/arrays into a list of strings
 function flattenImages(data) {
   if (typeof data === "string") return [data];
   if (Array.isArray(data)) return data.flatMap(flattenImages);
@@ -29,7 +31,7 @@ function flattenImages(data) {
 }
 
 function createItemBox(img, score, name, id, fadeIn = false) {
-  // Verhindere Items mit Score < 1
+  // Prevent items with score < 1
   if (score < 1) return null;
 
   const item_box_container = document.createElement("div");
@@ -41,8 +43,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
     item_box_container.style.opacity = "0";
     item_box_container.style.maxHeight = "0";
     item_box_container.style.overflow = "hidden";
-    item_box_container.style.transition =
-      "opacity 0.25s ease-in-out, max-height 0.25s ease-in-out";
+    item_box_container.style.transition = `opacity ${ANIMATION_DURATION_S}s ease-in-out, max-height ${ANIMATION_DURATION_S}s ease-in-out`;
   }
 
   const item_box_number = document.createElement("div");
@@ -58,7 +59,8 @@ function createItemBox(img, score, name, id, fadeIn = false) {
 
   const item_box_name = document.createElement("div");
   item_box_name.classList.add("average-item-box-name");
-  item_box_name.innerText = name;
+  item_box_name.innerText =
+    name.length > 50 ? name.substring(0, 50) + "..." : name;
 
   item_box.appendChild(image_element);
 
@@ -66,7 +68,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   item_box_container.appendChild(item_box_number);
   item_box_container.appendChild(item_box);
 
-  // An der richtigen Stelle einfügen (aufsteigend nach Score)
+  // Insert at correct position (ascending by score)
   const existingItems = Array.from(OVERLAY_NODE.children);
   let insertBefore = null;
   for (const item of existingItems) {
@@ -84,7 +86,6 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   }
 
   if (fadeIn) {
-    // Berechne die tatsächliche Höhe für eine flüssige Animation
     const targetHeight = item_box_container.scrollHeight + "px";
 
     requestAnimationFrame(() => {
@@ -92,12 +93,11 @@ function createItemBox(img, score, name, id, fadeIn = false) {
       item_box_container.style.maxHeight = targetHeight;
     });
 
-    // Nach Animation die Styles zurücksetzen
     setTimeout(() => {
       item_box_container.style.maxHeight = "";
       item_box_container.style.overflow = "";
       item_box_container.style.transition = "";
-    }, 250);
+    }, ANIMATION_DURATION_MS);
   }
 
   return item_box_container;
@@ -109,25 +109,18 @@ function ascendingOrderData(data) {
     .sort((a, b) => data[a]["global-average"] - data[b]["global-average"]);
 }
 
-// ============================================
 // Animation
-// ============================================
-
-// Sortiert die DOM-Elemente entsprechend der gewünschten Reihenfolge
-// Fügt nur EINE Animation hinzu (die erste Diskrepanz)
+// Sorts DOM elements according to desired order
 function sortFieldsByOrder(desiredOrder) {
   const fields = document.getElementsByClassName("average-item-box-container");
   if (fields.length === 0) return;
 
-  // Aktuelle DOM-Reihenfolge ermitteln (über data-id Attribut)
   const currentOrder = Array.from(fields).map((f) => f.dataset.id);
 
-  // Nur Items sortieren die auch im DOM existieren
   const existingDesiredOrder = desiredOrder.filter((id) =>
     currentOrder.includes(id)
   );
 
-  // Finde erste Diskrepanz
   for (let i = 0; i < existingDesiredOrder.length; i++) {
     const desiredId = existingDesiredOrder[i];
     const currentIndex = currentOrder.indexOf(desiredId);
@@ -138,7 +131,7 @@ function sortFieldsByOrder(desiredOrder) {
           "average-item-box-container"
         );
         if (freshFields.length === 0 || i >= freshFields.length) {
-          await delay(250);
+          await delay(ANIMATION_DURATION_MS);
           return;
         }
 
@@ -152,7 +145,7 @@ function sortFieldsByOrder(desiredOrder) {
         ) {
           repositionField(freshFields, i, freshFromIndex);
         }
-        await delay(250);
+        await delay(ANIMATION_DURATION_MS);
       });
       return;
     }
@@ -161,90 +154,93 @@ function sortFieldsByOrder(desiredOrder) {
 
 let isRunning = false;
 
-//es kann pasieren das es so viele images gibt, dass es längert lädt als die intervallzeit
+// It can happen that there are so many images that loading takes longer than the interval time (maybe FIXED with try-block?)
 setInterval(async () => {
-  const response = await fetch("backend/send-global-average.php");
-  // console.log("Fetching global average data...");
-  if (!response.ok) return;
-  let fullData = await response.json();
-  let data = fullData.items || {};
+  if (isRunning) return;
+  isRunning = true;
 
-  if (first_run) {
-    first_run = false;
-    isRunning = true;
-    imageHash = flattenImages(
-      await readJsonFile("item-data/indexed_json.json")
-    );
-
-    const images = ascendingOrderData(data);
-
-    for (const current_img of images) {
-      const average = data[current_img]["global-average"];
-      if (average < 1) continue;
-
-      const current_name = extractNameFromPath(current_img);
-      const img_path = imageHash.find((str) => str.includes(current_img));
-      const url = "item-data/" + img_path.replace("**", RESOLUTION);
-
-      createItemBox(url, average, current_name, current_img);
+  try {
+    const response = await fetch("backend/send-global-average.php");
+    // console.log("Fetching global average data...");
+    if (!response.ok) {
+      isRunning = false;
+      return;
     }
-    isRunning = false;
-  } else if (!isRunning) {
-    isRunning = true;
-    // Scores aktualisieren
-    const fields = document.getElementsByClassName(
-      "average-item-box-container"
-    );
-    // Rückwärts iterieren um beim Entfernen keine Elemente zu überspringen
-    for (let i = fields.length - 1; i >= 0; i--) {
-      const field = fields[i];
-      const id = field.dataset.id;
-      if (data[id]) {
-        const newScore = data[id]["global-average"];
-        // Entferne Items mit Score < 1
-        if (newScore < 1) {
-          field.remove();
-          continue;
-        }
-        const oldScore = parseFloat(field.dataset.score);
-        if (newScore !== oldScore) {
-          field.dataset.score = newScore;
-          const numberEl = field.querySelector(".average-item-box-number");
-          if (numberEl) numberEl.innerText = newScore;
-        }
-      }
-    }
+    let fullData = await response.json();
+    let data = fullData.items || {};
 
-    // Neue Items erkennen und hinzufügen
-    const currentIds = Array.from(
-      document.getElementsByClassName("average-item-box-container")
-    ).map((f) => f.dataset.id);
-    const desiredOrder = ascendingOrderData(data);
+    if (first_run) {
+      first_run = false;
+      imageHash = flattenImages(
+        await readJsonFile("item-data/indexed_json.json")
+      );
 
-    for (const id of desiredOrder) {
-      // Prüfen ob Item existiert ODER gerade hinzugefügt wird
-      if (
-        !currentIds.includes(id) &&
-        !pendingItems.has(id) &&
-        data[id]["global-average"] >= 1
-      ) {
-        pendingItems.add(id); // Markieren als "wird hinzugefügt"
+      const images = ascendingOrderData(data);
 
-        const current_name = extractNameFromPath(id);
-        const img_path = imageHash.find((str) => str.includes(id));
+      for (const current_img of images) {
+        const average = data[current_img]["global-average"];
+        if (average < 1) continue;
+
+        const current_name = extractNameFromPath(current_img);
+        const img_path = imageHash.find((str) => str.includes(current_img));
         const url = "item-data/" + img_path.replace("**", RESOLUTION);
-        const average = data[id]["global-average"];
 
-        animationQueue.add(async () => {
-          createItemBox(url, average, current_name, id, true);
-          pendingItems.delete(id);
-          await delay(250);
-        });
+        createItemBox(url, average, current_name, current_img);
       }
-    }
+    } else {
+      // Update scores
+      const fields = document.getElementsByClassName(
+        "average-item-box-container"
+      );
+      for (let i = fields.length - 1; i >= 0; i--) {
+        const field = fields[i];
+        const id = field.dataset.id;
+        if (data[id]) {
+          const newScore = data[id]["global-average"];
+          // Remove items with score < 1
+          if (newScore < 1) {
+            field.remove();
+            continue;
+          }
+          const oldScore = parseFloat(field.dataset.score);
+          if (newScore !== oldScore) {
+            field.dataset.score = newScore;
+            const numberEl = field.querySelector(".average-item-box-number");
+            if (numberEl) numberEl.innerText = newScore;
+          }
+        }
+      }
 
-    // Sortieren
-    sortFieldsByOrder(desiredOrder);
+      // Detect and add new items
+      const currentIds = Array.from(
+        document.getElementsByClassName("average-item-box-container")
+      ).map((f) => f.dataset.id);
+      const desiredOrder = ascendingOrderData(data);
+
+      for (const id of desiredOrder) {
+        if (
+          !currentIds.includes(id) &&
+          !pendingItems.has(id) &&
+          data[id]["global-average"] >= 1
+        ) {
+          pendingItems.add(id); // Mark as "being added"
+
+          const current_name = extractNameFromPath(id);
+          const img_path = imageHash.find((str) => str.includes(id));
+          const url = "item-data/" + img_path.replace("**", RESOLUTION);
+          const average = data[id]["global-average"];
+
+          animationQueue.add(async () => {
+            createItemBox(url, average, current_name, id, true);
+            pendingItems.delete(id);
+            await delay(ANIMATION_DURATION_MS);
+          });
+        }
+      }
+
+      sortFieldsByOrder(desiredOrder);
+    }
+  } finally {
     isRunning = false;
   }
 }, INTERVALL_MS);

@@ -7,7 +7,7 @@ body {
 
 :root {
   --viewport-h: 100vh;
-  --main-font-size: 0.25; 
+  --main-font-size: 0.25;
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --item-gap: clamp(
@@ -84,10 +84,10 @@ canvas {
   height: var(--item-size);
   width: calc(var(--item-size) * 2 + var(--item-gap));
   display: flex;
-  flex-direction: row; /* 👈 untereinander */
-  align-items: flex-end; /* 👉 rechts */
-  justify-content: flex-end; /* 👇 unten */
-  position: relative; /* wichtig fürs Animieren mit absolute */
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-end;
+  position: relative;
 }
 
 .item-box {
@@ -104,6 +104,14 @@ canvas {
   background: rgba(255, 255, 255, 0.7);
   border: none;
   color: dimgrey;
+}
+
+.item-box img {
+  transition: opacity 0.25s ease;
+}
+
+.item-box img.fade-out {
+  opacity: 0;
 }
 
 .item-box-number {
@@ -170,7 +178,6 @@ canvas {
 }
 
 /* Cursor styles for different game states */
-
 /* STARTED/READY/ROLLING: Canvas has pointer, item-boxes don't */
 body.state-started canvas,
 body.state-ready canvas,
@@ -193,11 +200,27 @@ body.state-select-image .item-box {
   cursor: pointer;
 }
 
+/* REVEALING: Keine Interaktion während der Animation */
+body.state-revealing canvas {
+  cursor: default;
+  pointer-events: none;
+}
+
+body.state-revealing .item-box {
+  cursor: default;
+  pointer-events: none;
+}
+
+body.state-revealing #item-container {
+  pointer-events: none;
+}
 
 #global-average-overlay-items-container {
   position: fixed;
   padding-top: calc(var(--item-margin) + var(--safe-top) + var(--item-gap));
-  padding-bottom: calc(var(--item-margin) + var(--safe-bottom) + var(--item-gap));
+  padding-bottom: calc(
+    var(--item-margin) + var(--safe-bottom) + var(--item-gap)
+  );
   box-sizing: border-box;
   transform: none;
   display: flex;
@@ -208,7 +231,6 @@ body.state-select-image .item-box {
   overflow-y: scroll;
   height: 100%;
   width: 100vw;
-
 }
 
 #global-average-overlay-items-container img {
@@ -220,10 +242,10 @@ body.state-select-image .item-box {
   height: var(--item-size);
   width: calc(var(--item-size) * 2 + var(--item-gap));
   display: flex;
-  flex-direction: row; /* 👈 untereinander */
-  align-items: flex-end; /* 👉 rechts */
-  justify-content: flex-end; /* 👇 unten */
-  position: relative; /* wichtig fürs Animieren mit absolute */
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-end;
+  position: relative;
 }
 
 .average-item-box {
@@ -263,12 +285,12 @@ body.state-select-image .item-box {
 }
 
 .average-item-box-name {
-  width: calc( 100vw - var(--item-size) * 2 - var(--item-gap) * 2);
+  width: calc(100vw - var(--item-size) * 2 - var(--item-gap) * 2);
   height: var(--item-size);
   display: flex;
   position: absolute;
   bottom: 0;
-  left: calc(var(--item-size) * 2  + var(--item-gap));
+  left: calc(var(--item-size) * 2 + var(--item-gap));
   color: dimgrey;
   flex-direction: row;
   align-items: center;
@@ -279,5 +301,4 @@ body.state-select-image .item-box {
   line-height: 1;
   z-index: 1;
   pointer-events: none;
-
 }

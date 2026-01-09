@@ -40,17 +40,15 @@ def getPath(current_path, start_dir):
 def traverse_dir(current_path, start_dir):
     result = {}
 
-    # Wenn es ein Verzeichnis ist → rekursiv
+    # If it is a directory -> recursive
     for item in listdir(current_path):
         item_path = current_path / item
 
-        # Unterordner → rekursion
         if item_path.is_dir():
             result[item] = traverse_dir(item_path, start_dir)
 
-        # Datei → URL erzeugen
         elif item_path.is_file():
-            url = getPath(item_path, start_dir)  # deine Funktion
+            url = getPath(item_path, start_dir) 
 
             if len(url) > 0:
                 result.setdefault("items", []).append(url[0])

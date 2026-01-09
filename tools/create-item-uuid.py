@@ -18,11 +18,8 @@ def rename_images(directory):
             # Generate a unique ID (UUID)
             unique_id = str(uuid.uuid4())
             
-            # Check if file already has a UUID prefix (contains double underscore)
             if "__" in filename:
-                # Split at the first occurrence of "__" to get the original name
                 prefix, rest = filename.split("__", 1)
-                # If the prefix is '1024', treat it as part of the name, not an ID to replace
                 if prefix == "1024":
                     original_name = filename
                 else:

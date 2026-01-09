@@ -48,19 +48,19 @@ export function repositionField(fields, targetIndex, startIndex) {
   const targetRect = target.getBoundingClientRect();
   const height = fieldRect.height;
 
-  // Transition per Inline-Style setzen
+  // Set transition
   fieldsArray.forEach((f) => (f.style.transition = "transform 0.25s ease"));
 
   const deltaY = targetRect.top - fieldRect.top;
   field.style.transform = `translateY(${deltaY}px)`;
 
-  // Nach unten schieben: startIndex < targetIndex
+  // Move down: startIndex < targetIndex
   if (startIndex < targetIndex) {
     for (let i = startIndex + 1; i <= targetIndex; i++) {
       fieldsArray[i].style.transform = `translateY(-${height}px)`;
     }
   }
-  // Nach oben schieben: startIndex > targetIndex
+  // Move up: startIndex > targetIndex
   else {
     for (let i = targetIndex; i < startIndex; i++) {
       fieldsArray[i].style.transform = `translateY(${height}px)`;
@@ -81,7 +81,7 @@ export function repositionField(fields, targetIndex, startIndex) {
   }, 250);
 }
 
-// Animation Queue - Führt Animationen nacheinander aus
+// Animation Queue
 class AnimationQueue {
   constructor() {
     this.queue = [];

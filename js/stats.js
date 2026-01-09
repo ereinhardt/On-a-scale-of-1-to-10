@@ -1,6 +1,5 @@
-// User Count
 (function () {
-  // userId im sessionStorage speichern - bleibt bei Reload gleich
+  // Store userId in sessionStorage
   let userId = sessionStorage.getItem("userId");
   if (!userId) {
     userId = "user_" + Math.random().toString(36).substr(2, 9);
@@ -9,16 +8,15 @@
   const userCountApi = "./backend/user-count.php";
   const statsApi = "./backend/send-global-average.php";
 
-  // Always ping to register user (even if stats are hidden)
+  // Always ping to register user
   function pingUser() {
     fetch(userCountApi + "?action=ping&userId=" + userId).catch(() => {});
   }
 
-  // Check if stats should be shown
   const showStats = localStorage.getItem("showStats") === "true";
   const statsContainer = document.querySelector(".stats-container");
 
-  // Only use pingUser if stats are hidden (otherwise updateUserCount handles it)
+  // Only use pingUser if stats are hidden
   if (!showStats) {
     pingUser();
     setInterval(pingUser, 1000);
@@ -30,7 +28,7 @@
   });
 
   if (!showStats) {
-    return; // Exit early - no stats display
+    return;
   }
 
   function updateUserCount() {
@@ -67,5 +65,5 @@
   updateUserCount();
   updateItemStats();
   setInterval(updateUserCount, 1000);
-  setInterval(updateItemStats, 25000);
+  setInterval(updateItemStats, 10000);
 })();

@@ -4,7 +4,7 @@ export function rotation(p1, p2, p3, p4) {
   return Math.atan2(p1 - p2, p3 - p4);
 }
 
-// OneEuroFilters for smoothing values in scene.js
+// OneEuroFilters for scene.js
 export class OneEuroFilter {
   constructor(minCutoff = 1.0, beta = 0.0) {
     this.minCutoff = minCutoff;
