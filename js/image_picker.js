@@ -18,23 +18,31 @@ export default class ImagePicker {
 
     this.queue = new Array(this.queue_length).fill(0);
     this.cache = {};
-    this.usedInGame = new Set();
+    this.usedSubcategories = new Set();
   }
 
-  allreadyInserted(id) {
-    // Check if item was already used in current game
-    if (this.usedInGame.has(id)) return true;
+  // Extracts the subcategory from an item URL
+  // e.g. "item-data/History/Countries_Tier_List_Maker__edit/abc.png" -> "History/Countries_Tier_List_Maker__edit"
+  getSubcategory(url) {
+    const parts = url.replace(/^item-data\//, "").split("/");
+    parts.pop(); // Remove filename
+    return parts.join("/");
+  }
 
-    return false;
+  isSubcategoryUsed(id) {
+    const subcategory = this.getSubcategory(id);
+    return subcategory && this.usedSubcategories.has(subcategory);
   }
 
   markAsUsed(id) {
-    this.usedInGame.add(id);
+    const subcategory = this.getSubcategory(id);
+    if (subcategory) {
+      this.usedSubcategories.add(subcategory);
+    }
   }
 
-  // Resets the list of used items (for new game)
   resetUsedItems() {
-    this.usedInGame.clear();
+    this.usedSubcategories.clear();
   }
 
   getRandomItem() {
@@ -63,7 +71,8 @@ export default class ImagePicker {
   getRandomUrl() {
     let random_url = this.getRandomItem();
 
-    while (this.allreadyInserted(random_url)) {
+    // Avoid items from already used subcategories
+    while (this.isSubcategoryUsed(random_url)) {
       random_url = this.getRandomItem();
     }
 
@@ -97,12 +106,17 @@ export default class ImagePicker {
   }
 
   nextImage() {
-    const random_url = this.getRandomUrl();
+    // Find first item whose subcategory is not yet used
+    const index = this.queue.findIndex(
+      (item) => item?.id && !this.isSubcategoryUsed(item.id),
+    );
 
-    const new_image = this.queue.shift();
+    // Remove selected item (or first as fallback)
+    const selectedItem = this.queue.splice(index >= 0 ? index : 0, 1)[0];
 
-    this.setImage(random_url, -1);
+    // Add new random item to queue
+    this.setImage(this.getRandomUrl(), -1);
 
-    return new_image;
+    return selectedItem;
   }
 }

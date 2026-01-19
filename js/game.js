@@ -188,7 +188,6 @@ export default class Game {
     });
 
     resetContainerOrder();
-
     resetNumberDisplays();
   }
 

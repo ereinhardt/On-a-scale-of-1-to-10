@@ -108,6 +108,13 @@ export default class Scene {
       case GAME_STATE.ROLLING:
         this.game.stop_rolling();
         break;
+
+      case GAME_STATE.REVEAL_PAUSE:
+      case GAME_STATE.REVEALING:
+        // Skip reveal and reset game
+        this.picker.resetUsedItems();
+        this.game.reset();
+        break;
     }
   }
 

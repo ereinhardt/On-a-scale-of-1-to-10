@@ -21,7 +21,8 @@ body {
       (
           var(--viewport-h) - var(--safe-top) - var(--safe-bottom) -
             (11 * var(--item-gap))
-        ) / 12
+        ) /
+        12
     )
   );
   --item-margin: var(--item-size);
@@ -121,7 +122,10 @@ canvas {
   position: absolute;
   top: 0;
   bottom: 0;
-  transition: right 0.25s ease, width 0.25s ease, padding-right 0.25s ease;
+  transition:
+    right 0.25s ease,
+    width 0.25s ease,
+    padding-right 0.25s ease;
   right: 0;
   color: dimgrey;
   flex-direction: row;
@@ -200,10 +204,21 @@ body.state-select-image .item-box {
   cursor: pointer;
 }
 
-/* REVEALING: Keine Interaktion während der Animation */
-body.state-revealing canvas {
+/* REVEAL_PAUSE:*/
+body.state-reveal-pause canvas {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+body.state-reveal-pause .item-box {
   cursor: default;
   pointer-events: none;
+}
+
+/* REVEALING: */
+body.state-revealing canvas {
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 body.state-revealing .item-box {
