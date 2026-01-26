@@ -19,7 +19,7 @@ function incrementReloadCount() {
     JSON.stringify({
       count,
       timestamp: Date.now(),
-    })
+    }),
   );
   return count;
 }
@@ -56,7 +56,7 @@ function handleFatalError(error, source = "unknown") {
 
   if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
     console.error(
-      `Maximum reload attempts (${MAX_RELOAD_ATTEMPTS}) reached. Please reload manually.`
+      `Maximum reload attempts (${MAX_RELOAD_ATTEMPTS}) reached. Please reload manually.`,
     );
     clearReloadCount();
     return;
@@ -106,8 +106,8 @@ function scheduleAutoReloadAtMidnight() {
 
   console.log(
     `Auto-reload at midnight scheduled in ${Math.round(
-      timeUntilMidnight / 1000 / 60
-    )} minutes`
+      timeUntilMidnight / 1000 / 60,
+    )} minutes`,
   );
 
   setTimeout(() => {

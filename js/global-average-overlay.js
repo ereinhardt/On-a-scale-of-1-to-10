@@ -12,7 +12,7 @@ const ANIMATION_DURATION_MS = 250;
 const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
 const OVERLAY_NODE = document.getElementById(
-  "global-average-overlay-items-container"
+  "global-average-overlay-items-container",
 );
 
 let first_run = true;
@@ -57,10 +57,24 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   image_element.setAttribute("loading", "lazy");
   image_element.src = img;
 
+  // Retry logic for failed images
+  image_element.addEventListener("error", function retry() {
+    const retries = parseInt(this.dataset.retries || "0");
+    if (retries < 3) {
+      this.dataset.retries = retries + 1;
+      setTimeout(
+        () => {
+          this.src = img;
+        },
+        1000 * (retries + 1),
+      );
+    }
+  });
+
   const item_box_name = document.createElement("div");
   item_box_name.classList.add("average-item-box-name");
   item_box_name.innerText =
-    name.length > 50 ? name.substring(0, 50) + "..." : name;
+    name.length > 40 ? name.substring(0, 40) + "..." : name;
 
   item_box.appendChild(image_element);
 
@@ -118,7 +132,7 @@ function sortFieldsByOrder(desiredOrder) {
   const currentOrder = Array.from(fields).map((f) => f.dataset.id);
 
   const existingDesiredOrder = desiredOrder.filter((id) =>
-    currentOrder.includes(id)
+    currentOrder.includes(id),
   );
 
   for (let i = 0; i < existingDesiredOrder.length; i++) {
@@ -128,7 +142,7 @@ function sortFieldsByOrder(desiredOrder) {
     if (currentIndex !== i && currentIndex !== -1) {
       animationQueue.add(async () => {
         const freshFields = document.getElementsByClassName(
-          "average-item-box-container"
+          "average-item-box-container",
         );
         if (freshFields.length === 0 || i >= freshFields.length) {
           await delay(ANIMATION_DURATION_MS);
@@ -172,7 +186,7 @@ setInterval(async () => {
     if (first_run) {
       first_run = false;
       imageHash = flattenImages(
-        await readJsonFile("item-data/indexed_json.json")
+        await readJsonFile("item-data/indexed_json.json"),
       );
 
       const images = ascendingOrderData(data);
@@ -190,7 +204,7 @@ setInterval(async () => {
     } else {
       // Update scores
       const fields = document.getElementsByClassName(
-        "average-item-box-container"
+        "average-item-box-container",
       );
       for (let i = fields.length - 1; i >= 0; i--) {
         const field = fields[i];
@@ -213,7 +227,7 @@ setInterval(async () => {
 
       // Detect and add new items
       const currentIds = Array.from(
-        document.getElementsByClassName("average-item-box-container")
+        document.getElementsByClassName("average-item-box-container"),
       ).map((f) => f.dataset.id);
       const desiredOrder = ascendingOrderData(data);
 

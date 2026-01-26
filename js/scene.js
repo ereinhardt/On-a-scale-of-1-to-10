@@ -44,7 +44,7 @@ export default class Scene {
 
     // RENDERER
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // High-DPI support (capped at 1.5 for performance)
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2)); // High-DPI support (capped at 1.5 for performance)
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
@@ -73,6 +73,8 @@ export default class Scene {
       solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
     };
     this.detector = await faceLandmarksDetection.createDetector(model, config);
+    this.detectorModel = model;
+    this.detectorConfig = config;
   }
 
   async initImagePicker() {
@@ -135,7 +137,7 @@ export default class Scene {
       h / 2,
       -h / 2,
       -10,
-      10
+      10,
     );
 
     this.orthoCam.position.z = 2;
@@ -148,7 +150,7 @@ export default class Scene {
       40,
       window.innerWidth / window.innerHeight,
       0.1,
-      500
+      500,
     );
 
     this.perspCam.position.set(0, 0, 50);
@@ -267,7 +269,7 @@ export default class Scene {
       download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png"),
       download_image("start_screen/1024__8bit__Thank_you_for_your_input.png"),
       download_image(
-        "start_screen/1024__8bit__Anime__Reveal_Global_Average.png"
+        "start_screen/1024__8bit__Anime__Reveal_Global_Average.png",
       ),
     ]);
 
@@ -424,7 +426,7 @@ export default class Scene {
     const ndc = new THREE.Vector3(
       (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
       -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
-      -1
+      -1,
     );
 
     // point on near-mid plane in world coords
@@ -436,7 +438,7 @@ export default class Scene {
   screenToWorldAtZ(canvasX, canvasY, camera, targetZ) {
     const mouse = new THREE.Vector2(
       (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
-      -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1
+      -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
     );
 
     const raycaster = new THREE.Raycaster();
@@ -551,7 +553,7 @@ export default class Scene {
       try {
         this.face = await this.detector.estimateFaces(
           this.video_stream,
-          options
+          options,
         );
       } catch (error) {
         // console.warn("Face detection skipped:", error);
@@ -563,11 +565,32 @@ export default class Scene {
 
     if (faceInViewport) {
       this.lastFaceDetectedTime = time;
+      this.detectorStaleTimeout = null;
       if (this.headAnchor) this.headAnchor.visible = true;
     } else {
       // Prevent flickering: Keep showing for 200ms after loss
       if (time - this.lastFaceDetectedTime > 200) {
         if (this.headAnchor) this.headAnchor.visible = false;
+      }
+
+      // Reinitialize detector after 30s without face (prevents stale detector)
+      if (
+        time - this.lastFaceDetectedTime > 30000 &&
+        !this.detectorStaleTimeout
+      ) {
+        this.detectorStaleTimeout = true;
+        const oldDetector = this.detector;
+        faceLandmarksDetection
+          .createDetector(this.detectorModel, this.detectorConfig)
+          .then((d) => {
+            this.detector = d;
+            if (oldDetector && oldDetector.dispose) {
+              try {
+                oldDetector.dispose();
+              } catch (e) {}
+            }
+          })
+          .catch(() => {});
       }
 
       //reset game
@@ -620,7 +643,7 @@ export default class Scene {
           f.keypoints[152].z,
           f.keypoints[10].z,
           f.keypoints[152].y,
-          f.keypoints[10].y
+          f.keypoints[10].y,
         ); // Pitch
 
         // Filter Rotation
@@ -633,7 +656,7 @@ export default class Scene {
         // Compute world position along perspective camera ray
         const canvas_pixel = this.videoPixelToCanvasPixel(
           forehead.x,
-          forehead.y
+          forehead.y,
         );
 
         // Depth via Eye Distance
@@ -650,7 +673,7 @@ export default class Scene {
           canvas_pixel.x,
           canvas_pixel.y,
           this.perspCam,
-          smoothZ
+          smoothZ,
         );
 
         // Filter Position (Anchor is at forehead)

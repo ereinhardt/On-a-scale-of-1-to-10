@@ -171,6 +171,7 @@ canvas {
   height: 100vh;
   background: rgba(255, 255, 255, 0.7);
   z-index: 10000;
+  display: none;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease-in-out;

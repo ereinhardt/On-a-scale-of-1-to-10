@@ -42,9 +42,8 @@ async function setupCamera() {
             ) {
               await videoElement.play();
             } else {
-              const newStream = await navigator.mediaDevices.getUserMedia(
-                CAMERA_OPTIONS
-              );
+              const newStream =
+                await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
               videoElement.srcObject = newStream;
               await videoElement.play();
             }
@@ -57,7 +56,7 @@ async function setupCamera() {
   } catch (error) {
     // console.error(error);
     alert(
-      "Camera not found. Please make sure you have a camera connected and have granted permission to use it."
+      "Camera not found. Please make sure you have a camera connected and have granted permission to use it.",
     );
   }
 }

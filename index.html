@@ -120,6 +120,7 @@
             overlay.classList.remove("open");
             btn.textContent = "⌀ Global Average";
             clearInactivityTimer();
+            setTimeout(() => { if (!isOpen) overlay.style.display = "none"; }, 250);
           }
         }
 
@@ -153,7 +154,8 @@
           isOpen = !isOpen;
           if (isOpen) {
             document.getElementById("item-container").style.display = "none";
-            overlay.classList.add("open");
+            overlay.style.display = "block";
+            requestAnimationFrame(() => overlay.classList.add("open"));
             btn.textContent = "× Return to Input";
             document.getElementById(
               "global-average-overlay-items-container"
@@ -164,6 +166,7 @@
             overlay.classList.remove("open");
             btn.textContent = "⌀ Global Average";
             clearInactivityTimer();
+            setTimeout(() => { if (!isOpen) overlay.style.display = "none"; }, 250);
           }
         });
       })();
