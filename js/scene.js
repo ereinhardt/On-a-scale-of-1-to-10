@@ -17,7 +17,7 @@ export default class Scene {
     this.delta = 0;
     this.animationIntervall = 1 / this.animationSpeed;
     this.json_path = "item-data/indexed_json.json";
-    this.resetTimeout = 2000;
+    this.resetTimeout = 3000;
     this.lastSelectedImageBeforeReset = null;
 
     // Initialize OneEuroFilters

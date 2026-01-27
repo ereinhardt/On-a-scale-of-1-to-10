@@ -7,7 +7,7 @@ import {
   delay,
 } from "./util.js";
 
-const INTERVALL_MS = 1000;
+const INTERVALL_MS = 2000;
 const ANIMATION_DURATION_MS = 250;
 const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
@@ -135,34 +135,40 @@ function sortFieldsByOrder(desiredOrder) {
     currentOrder.includes(id),
   );
 
+  // Find all items that need to move
+  const itemsToMove = [];
   for (let i = 0; i < existingDesiredOrder.length; i++) {
     const desiredId = existingDesiredOrder[i];
     const currentIndex = currentOrder.indexOf(desiredId);
 
     if (currentIndex !== i && currentIndex !== -1) {
-      animationQueue.add(async () => {
-        const freshFields = document.getElementsByClassName(
-          "average-item-box-container",
-        );
-        if (freshFields.length === 0 || i >= freshFields.length) {
-          await delay(ANIMATION_DURATION_MS);
-          return;
-        }
-
-        const freshOrder = Array.from(freshFields).map((f) => f.dataset.id);
-        const freshFromIndex = freshOrder.indexOf(desiredId);
-
-        if (
-          freshFromIndex !== -1 &&
-          freshFromIndex !== i &&
-          i < freshFields.length
-        ) {
-          repositionField(freshFields, i, freshFromIndex);
-        }
-        await delay(ANIMATION_DURATION_MS);
-      });
-      return;
+      itemsToMove.push({ desiredId, targetIndex: i });
     }
+  }
+
+  // Add one queue entry per item (not per step)
+  for (const { desiredId, targetIndex } of itemsToMove) {
+    animationQueue.add(async () => {
+      const freshFields = document.getElementsByClassName(
+        "average-item-box-container",
+      );
+      if (freshFields.length === 0 || targetIndex >= freshFields.length) {
+        await delay(ANIMATION_DURATION_MS);
+        return;
+      }
+
+      const freshOrder = Array.from(freshFields).map((f) => f.dataset.id);
+      const freshFromIndex = freshOrder.indexOf(desiredId);
+
+      if (
+        freshFromIndex !== -1 &&
+        freshFromIndex !== targetIndex &&
+        targetIndex < freshFields.length
+      ) {
+        repositionField(freshFields, targetIndex, freshFromIndex);
+      }
+      await delay(ANIMATION_DURATION_MS);
+    });
   }
 }
 
