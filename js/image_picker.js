@@ -94,8 +94,13 @@ export default class ImagePicker {
     if (cached_urls.includes(url)) {
       img = this.cache[url];
     } else {
-      img = await download_image(url);
-      this.cache[url] = img;
+      try {
+        img = await download_image(url);
+        this.cache[url] = img;
+      } catch (e) {
+        // Image failed to load, skip
+        return;
+      }
     }
 
     if (i < 0) {

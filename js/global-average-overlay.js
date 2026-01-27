@@ -57,16 +57,16 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   image_element.setAttribute("loading", "lazy");
   image_element.src = img;
 
-  // Retry logic for failed images
+  // Retry logic for failed images (retries: 2s, 4s, 8s, 16s, 32s = ~1min total)
   image_element.addEventListener("error", function retry() {
     const retries = parseInt(this.dataset.retries || "0");
-    if (retries < 3) {
+    if (retries < 5) {
       this.dataset.retries = retries + 1;
       setTimeout(
         () => {
           this.src = img;
         },
-        1000 * (retries + 1),
+        2000 * Math.pow(2, retries),
       );
     }
   });
@@ -180,9 +180,8 @@ setInterval(async () => {
   isRunning = true;
 
   try {
-    const response = await fetch("backend/send-global-average.php");
-    // console.log("Fetching global average data...");
-    if (!response.ok) {
+    const response = await fetch("backend/send-global-average.php").catch(() => null);
+    if (!response || !response.ok) {
       isRunning = false;
       return;
     }
