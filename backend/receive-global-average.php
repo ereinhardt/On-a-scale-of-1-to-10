@@ -310,6 +310,13 @@ foreach ($current_data['items'] as $imageName => $defaultData) {
     }
 }
 
+// Remove items that no longer exist in indexed_json.json
+foreach ($global_average['items'] as $imageName => $itemData) {
+    if (!isset($current_data['items'][$imageName])) {
+        unset($global_average['items'][$imageName]);
+    }
+}
+
 // Update total-item-number
 $global_average['total-stats']['total-item-number'] = count($global_average['items']);
 
