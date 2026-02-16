@@ -14,6 +14,9 @@ def getPath(current_path, start_dir):
         if not current_path.name.lower().endswith(".png"):
             return []
 
+        if current_path.name.startswith("._"):
+            return []
+
         file_path = str(current_path.relative_to(start_dir))
 
         id_res = re.search(
