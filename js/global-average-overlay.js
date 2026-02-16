@@ -7,7 +7,7 @@ import {
   delay,
 } from "./util.js";
 
-const INTERVALL_MS = 2000;
+const INTERVALL_MS = 5000;
 const ANIMATION_DURATION_MS = 250;
 const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
