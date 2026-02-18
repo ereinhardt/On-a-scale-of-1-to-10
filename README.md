@@ -21,9 +21,21 @@ Example: 1024__8bit__Food__Apple.png
 
 ### 1. create-item-uuid.py:<br>
 
+```bash
+python create-item-uuid.py
+```
+
 ### 2. create-item-scale-variations.py:<br>
 
+```bash
+python create-item-scale-variations.py
+```
+
 ### 3. create-indexed-json.py:<br>
+
+```bash
+python create-indexed-json.py
+```
 
 ## Start
 
