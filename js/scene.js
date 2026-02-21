@@ -124,6 +124,20 @@ export default class Scene {
     document
       .getElementsByTagName("canvas")[0]
       .addEventListener("click", this.onClick.bind(this));
+
+    // Also start the game when clicking on an item box before the game has begun
+    const itemBoxes = document.querySelectorAll(".item-box-container");
+    for (const box of itemBoxes) {
+      box.addEventListener("click", () => {
+        if (
+          this.game.state === GAME_STATE.STARTED ||
+          this.game.state === GAME_STATE.READY ||
+          this.game.state === GAME_STATE.ROLLING
+        ) {
+          this.onClick();
+        }
+      });
+    }
   }
 
   // ORTHO CAMERA – EXACT SCREEN WIDTH/HEIGHT
@@ -268,9 +282,7 @@ export default class Scene {
     const [startScreenImg, thankYouImg, revealImg] = await Promise.all([
       download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png"),
       download_image("start_screen/1024__8bit__Thank_you_for_your_input.png"),
-      download_image(
-        "start_screen/1024__8bit__Reveal_Global_Average.png",
-      ),
+      download_image("start_screen/1024__8bit__Reveal_Global_Average.png"),
     ]);
 
     // Start screen texture
@@ -503,8 +515,8 @@ export default class Scene {
     return distanceMeters;
   } // Optional: map real meters to your desired scene Z-depth
   mapDepthMetersToSceneZ(m) {
-    // Your camera is at z = 50 → map meters logically
-    // m = 0.5m → close, m = 1.5m → far
+    // Your camera is at z = 50 -> map meters logically
+    // m = 0.5m -> close, m = 1.5m -> far
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
 
