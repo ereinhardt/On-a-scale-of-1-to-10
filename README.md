@@ -39,8 +39,4 @@ python create-indexed-json.py
 
 ## Start
 
-Upload to your Webserver. 
-
-## Known Bugs (TODO):
-
-–No Bugs know–
+Upload to your Webserver.
