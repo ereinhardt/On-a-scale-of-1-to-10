@@ -269,7 +269,7 @@ export default class Scene {
       download_image("start_screen/1024__8bit__On_a_scale_from_1_to_10.png"),
       download_image("start_screen/1024__8bit__Thank_you_for_your_input.png"),
       download_image(
-        "start_screen/1024__8bit__Anime__Reveal_Global_Average.png",
+        "start_screen/1024__8bit__Reveal_Global_Average.png",
       ),
     ]);
 
