@@ -256,16 +256,18 @@ body.state-revealing #item-container {
 
 .average-item-box-container {
   height: var(--item-size);
-  width: calc(var(--item-size) * 2 + var(--item-gap));
+  width: 100vw;
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 100vw var(--item-size);
 }
 
 .average-item-box {
   width: var(--item-size);
+  min-width: var(--item-size);
   aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: row;
@@ -278,35 +280,31 @@ body.state-revealing #item-container {
   background: white;
   border: none;
   color: dimgrey;
+  order: 2;
 }
 
 .average-item-box-number {
-  width: calc((var(--item-size) * 2 + var(--item-gap)) / 2);
+  width: var(--item-size);
+  min-width: var(--item-size);
   height: var(--item-size);
   display: flex;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: calc(var(--item-size));
   color: dimgrey;
   flex-direction: row;
   align-items: center;
   justify-content: end;
   padding-right: var(--item-gap);
+  box-sizing: border-box;
   font-size: calc(var(--item-size) * var(--main-font-size));
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  z-index: 1;
   pointer-events: none;
+  order: 1;
 }
 
 .average-item-box-name {
-  width: calc(100vw - var(--item-size) * 2 - var(--item-gap) * 2);
+  flex: 1;
   height: var(--item-size);
   display: flex;
-  position: absolute;
-  bottom: 0;
-  left: calc(var(--item-size) * 2 + var(--item-gap));
   color: dimgrey;
   flex-direction: row;
   align-items: center;
@@ -315,6 +313,6 @@ body.state-revealing #item-container {
   font-size: calc(var(--item-size) * var(--main-font-size));
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  z-index: 1;
   pointer-events: none;
+  order: 3;
 }

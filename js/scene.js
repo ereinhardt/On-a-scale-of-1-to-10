@@ -10,7 +10,6 @@ export default class Scene {
   constructor(video_stream) {
     this.video_stream = video_stream;
     this.scene = new THREE.Scene();
-    this.first_render = true;
     this.game = new Game();
     this.clock = new THREE.Clock();
     this.animationSpeed = 15; //how many pictures each Sec
@@ -48,11 +47,34 @@ export default class Scene {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
+    // Recover from WebGL context loss (can happen when MediaPipe competes for GPU)
+    this._contextLost = false;
+    this.renderer.domElement.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      this._contextLost = true;
+    });
+    this.renderer.domElement.addEventListener("webglcontextrestored", () => {
+      this._contextLost = false;
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      // Force all textures to re-upload to GPU
+      this.scene.traverse((obj) => {
+        if (obj.material) {
+          const mats = Array.isArray(obj.material)
+            ? obj.material
+            : [obj.material];
+          for (const mat of mats) {
+            if (mat.map) mat.map.needsUpdate = true;
+            mat.needsUpdate = true;
+          }
+        }
+      });
+      // Reinitialize face detector (its WebGL context is also broken)
+      this.initFaceDetection();
+    });
+
     // VIDEO + UI-Layer (Layer 0)
     this.createVideoPlane();
     this.updateVideoScale();
-
-    this.createBoundingBox();
 
     // 3D-Layer (Layer 1)
     this.create3DObjects();
@@ -60,10 +82,12 @@ export default class Scene {
     // this.enableResponsive(); // Removed in favor of checkResize in animate
 
     this.initImagePicker();
-    this.initFaceDetection();
     this.initClickDetection();
 
-    this.renderer.setAnimationLoop(this.animate.bind(this));
+    // Start animation loop only after MediaPipe is fully initialized
+    this.initFaceDetection().then(() => {
+      this.renderer.setAnimationLoop(this.animate.bind(this));
+    });
   }
 
   async initFaceDetection() {
@@ -73,15 +97,13 @@ export default class Scene {
       solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
     };
     this.detector = await faceLandmarksDetection.createDetector(model, config);
-    this.detectorModel = model;
-    this.detectorConfig = config;
   }
 
   async initImagePicker() {
-    this.urls = await readJsonFile(this.json_path);
+    const urls = await readJsonFile(this.json_path);
     const queue_length = Math.floor(30);
 
-    const imagePicker = new ImagePicker(this.urls, queue_length);
+    const imagePicker = new ImagePicker(urls, queue_length);
 
     await imagePicker.init();
 
@@ -255,22 +277,6 @@ export default class Scene {
     this.perspCam.updateProjectionMatrix();
   }
 
-  // BOUNDING BOX (Layer 0)
-  createBoundingBox() {
-    const geo = new THREE.PlaneGeometry(1, 1);
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.5,
-    });
-
-    this.bbox = new THREE.Mesh(geo, mat);
-    this.bbox.position.z = 1;
-    this.bbox.layers.set(0);
-
-    //this.scene.add(this.bbox);
-  }
-
   // OPTIONAL: Example 3D Object (Layer 1)
   async create3DObjects() {
     // Container for the head tracking (Anchor at forehead)
@@ -432,37 +438,26 @@ export default class Scene {
     return { x: cx, y: cy };
   }
 
-  // map canvas pixel -> world point along camera ray, at a given distance from camera
-  screenPixelToWorldAtDistance(canvasX, canvasY, camera) {
-    // NDC
-    const ndc = new THREE.Vector3(
-      (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
-      -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
-      -1,
-    );
-
-    // point on near-mid plane in world coords
-    const worldPoint = ndc.unproject(camera);
-
-    return worldPoint;
-  }
-
   screenToWorldAtZ(canvasX, canvasY, camera, targetZ) {
-    const mouse = new THREE.Vector2(
+    if (!this._mouse) this._mouse = new THREE.Vector2();
+    if (!this._raycaster) this._raycaster = new THREE.Raycaster();
+    if (!this._resultVec) this._resultVec = new THREE.Vector3();
+
+    this._mouse.set(
       (canvasX / this.renderer.domElement.clientWidth) * 2 - 1,
       -(canvasY / this.renderer.domElement.clientHeight) * 2 + 1,
     );
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
+    this._raycaster.setFromCamera(this._mouse, camera);
 
     // Ray: origin + dir * t
-    const origin = raycaster.ray.origin;
-    const dir = raycaster.ray.direction;
+    const origin = this._raycaster.ray.origin;
+    const dir = this._raycaster.ray.direction;
 
     const t = (targetZ - origin.z) / dir.z;
 
-    return origin.clone().add(dir.multiplyScalar(t));
+    this._resultVec.copy(origin).add(dir.clone().multiplyScalar(t));
+    return this._resultVec;
   }
 
   getFocalLengthPixels(videoWidth, fovDeg) {
@@ -520,17 +515,30 @@ export default class Scene {
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
 
-  createLabelTexture(text) {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = 2048; // Wider canvas to match 10:1.25 plane ratio (8:1)
-    canvas.height = 256;
+  safeDispose(texture) {
+    if (!texture) return;
+    try {
+      texture.dispose();
+    } catch (e) {}
+  }
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0)";
+  createLabelTexture(text) {
+    // Reuse a single canvas and texture for the label
+    if (!this._labelCanvas) {
+      this._labelCanvas = document.createElement("canvas");
+      this._labelCanvas.width = 2048;
+      this._labelCanvas.height = 256;
+      this._labelCtx = this._labelCanvas.getContext("2d");
+      this._labelTex = new THREE.CanvasTexture(this._labelCanvas);
+      this._labelTex.colorSpace = THREE.SRGBColorSpace;
+    }
+
+    const canvas = this._labelCanvas;
+    const ctx = this._labelCtx;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (text) {
-      // Truncate text to 25 characters and add "..." if longer
       const maxLength = 25;
       const displayText =
         text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
@@ -543,9 +551,8 @@ export default class Scene {
       ctx.fillText(displayText, canvas.width / 2, canvas.height / 2);
     }
 
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
+    this._labelTex.needsUpdate = true;
+    return this._labelTex;
   }
   // ANIMATE
   async animate(time) {
@@ -554,22 +561,25 @@ export default class Scene {
     this.renderer.autoClear = false;
     this.renderer.clear();
 
-    // Face Mesh
+    // Face Mesh (non-blocking: run detection in background, use latest result)
     if (
+      !this._faceDetectionRunning &&
       this.detector &&
       this.video_stream.readyState >= 2 &&
       this.video_stream.videoWidth > 0 &&
       this.video_stream.videoHeight > 0
     ) {
+      this._faceDetectionRunning = true;
       const options = { maxFaces: 1, flipHorizontal: true };
-      try {
-        this.face = await this.detector.estimateFaces(
-          this.video_stream,
-          options,
-        );
-      } catch (error) {
-        // console.warn("Face detection skipped:", error);
-      }
+      this.detector
+        .estimateFaces(this.video_stream, options)
+        .then((result) => {
+          this.face = result;
+        })
+        .catch(() => {})
+        .finally(() => {
+          this._faceDetectionRunning = false;
+        });
     }
 
     const faceFound = this.face && this.face.length > 0;
@@ -577,32 +587,11 @@ export default class Scene {
 
     if (faceInViewport) {
       this.lastFaceDetectedTime = time;
-      this.detectorStaleTimeout = null;
       if (this.headAnchor) this.headAnchor.visible = true;
     } else {
       // Prevent flickering: Keep showing for 200ms after loss
       if (time - this.lastFaceDetectedTime > 200) {
         if (this.headAnchor) this.headAnchor.visible = false;
-      }
-
-      // Reinitialize detector after 30s without face (prevents stale detector)
-      if (
-        time - this.lastFaceDetectedTime > 30000 &&
-        !this.detectorStaleTimeout
-      ) {
-        this.detectorStaleTimeout = true;
-        const oldDetector = this.detector;
-        faceLandmarksDetection
-          .createDetector(this.detectorModel, this.detectorConfig)
-          .then((d) => {
-            this.detector = d;
-            if (oldDetector && oldDetector.dispose) {
-              try {
-                oldDetector.dispose();
-              } catch (e) {}
-            }
-          })
-          .catch(() => {});
       }
 
       //reset game
@@ -635,20 +624,14 @@ export default class Scene {
 
         const x = (cx - vw / 2) * scale;
         const y = (vh / 2 - cy) * scale;
-
-        this.bbox.scale.set(w, h, 1);
-        this.bbox.position.set(x, y, 1);
       }
 
       // Update 3D Rotation
       const leftEye = f.keypoints.find((e) => e.name === "leftEyebrow");
       const rightEye = f.keypoints.find((e) => e.name === "rightEyebrow");
-      const chin = f.keypoints[152];
       const forehead = f.keypoints[10];
 
-      this.first_render = false;
-
-      if (leftEye && rightEye && chin) {
+      if (leftEye && rightEye && f.keypoints[152]) {
         const rawRotY = rotation(leftEye.z, rightEye.z, leftEye.x, rightEye.x); // Yaw
         const rawRotZ = rotation(leftEye.y, rightEye.y, leftEye.x, rightEye.x); // Roll
         const rawRotX = rotation(
@@ -710,6 +693,15 @@ export default class Scene {
         if (nextImage && nextImage.image) {
           this.game.currentImage = nextImage;
 
+          if (
+            !this._contextLost &&
+            this.textureMap.map &&
+            this.textureMap.map !== this.startScreen &&
+            this.textureMap.map !== this.thankYouScreen &&
+            this.textureMap.map !== this.revealScreen
+          ) {
+            this.safeDispose(this.textureMap.map);
+          }
           const tex = new THREE.Texture(this.game.currentImage.image);
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.needsUpdate = true;
@@ -734,6 +726,15 @@ export default class Scene {
       this.lastSelectedImageBeforeReset
     ) {
       this.game.currentImage = this.lastSelectedImageBeforeReset;
+      if (
+        !this._contextLost &&
+        this.textureMap.map &&
+        this.textureMap.map !== this.startScreen &&
+        this.textureMap.map !== this.thankYouScreen &&
+        this.textureMap.map !== this.revealScreen
+      ) {
+        this.safeDispose(this.textureMap.map);
+      }
       const tex = new THREE.Texture(this.game.currentImage.image);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.needsUpdate = true;
@@ -752,7 +753,8 @@ export default class Scene {
     if (
       this.game.state == GAME_STATE.STARTED &&
       this.startScreen &&
-      this.textureMap
+      this.textureMap &&
+      this.textureMap.map !== this.startScreen
     ) {
       this.textureMap.map = this.startScreen;
       this.textureMap.needsUpdate = true;
@@ -767,7 +769,8 @@ export default class Scene {
     if (
       this.game.state == GAME_STATE.REVEAL_PAUSE &&
       this.thankYouScreen &&
-      this.textureMap
+      this.textureMap &&
+      this.textureMap.map !== this.thankYouScreen
     ) {
       this.textureMap.map = this.thankYouScreen;
       this.textureMap.needsUpdate = true;
@@ -782,7 +785,8 @@ export default class Scene {
     if (
       this.game.state == GAME_STATE.REVEALING &&
       this.revealScreen &&
-      this.textureMap
+      this.textureMap &&
+      this.textureMap.map !== this.revealScreen
     ) {
       this.textureMap.map = this.revealScreen;
       this.textureMap.needsUpdate = true;

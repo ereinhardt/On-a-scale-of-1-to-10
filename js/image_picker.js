@@ -18,7 +18,10 @@ export default class ImagePicker {
 
     this.queue = new Array(this.queue_length).fill(0);
     this.cache = {};
+    this.cacheKeys = [];
+    this.maxCacheSize = queue_length * 2;
     this.usedSubcategories = new Set();
+    this._pendingDownloads = 0;
   }
 
   // Extracts the subcategory from an item URL
@@ -71,9 +74,11 @@ export default class ImagePicker {
   getRandomUrl() {
     let random_url = this.getRandomItem();
 
-    // Avoid items from already used subcategories
-    while (this.isSubcategoryUsed(random_url)) {
+    // Avoid items from already used subcategories (max 100 attempts)
+    let attempts = 0;
+    while (this.isSubcategoryUsed(random_url) && attempts < 100) {
       random_url = this.getRandomItem();
+      attempts++;
     }
 
     return random_url;
@@ -89,22 +94,31 @@ export default class ImagePicker {
   async setImage(url, i) {
     let img;
 
-    const cached_urls = Object.keys(this.cache);
-
-    if (cached_urls.includes(url)) {
+    if (this.cache[url]) {
       img = this.cache[url];
     } else {
       try {
+        this._pendingDownloads++;
         img = await download_image(url);
+        this._pendingDownloads--;
         this.cache[url] = img;
+        this.cacheKeys.push(url);
+        // Evict oldest entries if cache is too large
+        while (this.cacheKeys.length > this.maxCacheSize) {
+          const oldKey = this.cacheKeys.shift();
+          delete this.cache[oldKey];
+        }
       } catch (e) {
-        // Image failed to load, skip
+        this._pendingDownloads--;
         return;
       }
     }
 
     if (i < 0) {
-      this.queue.push(new ImageItem(url, img));
+      // Only add if queue isn't already full
+      if (this.queue.length < this.queue_length) {
+        this.queue.push(new ImageItem(url, img));
+      }
     } else {
       this.queue[i] = new ImageItem(url, img);
     }
@@ -119,8 +133,11 @@ export default class ImagePicker {
     // Remove selected item (or first as fallback)
     const selectedItem = this.queue.splice(index >= 0 ? index : 0, 1)[0];
 
-    // Add new random item to queue
-    this.setImage(this.getRandomUrl(), -1);
+    // Refill queue: start downloads until queue + pending reaches target
+    const needed = this.queue_length - this.queue.length - this._pendingDownloads;
+    for (let i = 0; i < needed; i++) {
+      this.setImage(this.getRandomUrl(), -1);
+    }
 
     return selectedItem;
   }

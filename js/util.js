@@ -44,6 +44,10 @@ export function repositionField(fields, targetIndex, startIndex) {
   const target = fieldsArray[targetIndex];
   const parent = field.parentElement;
 
+  // Force content-visibility rendering for animation participants
+  field.style.contentVisibility = "visible";
+  target.style.contentVisibility = "visible";
+
   const fieldRect = field.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
   const height = fieldRect.height;
@@ -77,7 +81,10 @@ export function repositionField(fields, targetIndex, startIndex) {
       parent.insertBefore(field, target);
     }
 
-    fieldsArray.forEach((f) => (f.style.transform = "none"));
+    fieldsArray.forEach((f) => {
+      f.style.transform = "none";
+      f.style.contentVisibility = "";
+    });
   }, 250);
 }
 
