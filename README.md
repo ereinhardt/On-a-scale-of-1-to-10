@@ -1,4 +1,4 @@
-# On-a-scale-of-1-to-10 (v.1.4-2-2026)
+# On-a-scale-of-1-to-10 (v.1.5-2-2026)
 
 "On a Scale from 1 to 10" is a (web-based) face-filter where users rate randomly displayed items sourced from other online filters.
 
