@@ -35,6 +35,12 @@ export default class Scene {
 
     this.lastFaceDetectedTime = 0;
 
+    // Downscaled canvas for face detection (reduces WASM memory usage)
+    this._detectionCanvas = document.createElement("canvas");
+    this._detectionCtx = this._detectionCanvas.getContext("2d");
+    this._detectionMaxWidth = 640;
+    this._detectionOptions = { maxFaces: 1, flipHorizontal: true };
+
     //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
     this.createOrthoCamera();
 
@@ -79,8 +85,6 @@ export default class Scene {
     // 3D-Layer (Layer 1)
     this.create3DObjects();
 
-    // this.enableResponsive(); // Removed in favor of checkResize in animate
-
     this.initImagePicker();
     this.initClickDetection();
 
@@ -91,12 +95,20 @@ export default class Scene {
   }
 
   async initFaceDetection() {
+    // Dispose old detector to free its WASM heap
+    if (this.detector) {
+      try {
+        this.detector.dispose();
+      } catch (e) {}
+      this.detector = null;
+    }
     const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
     const config = {
       runtime: "mediapipe",
       solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
     };
     this.detector = await faceLandmarksDetection.createDetector(model, config);
+    this._detectionCount = 0;
   }
 
   async initImagePicker() {
@@ -243,9 +255,6 @@ export default class Scene {
     this._videoScaledH = scaledH;
     this._videoLeft = (sw - this._videoScaledW) / 2;
     this._videoTop = (sh - this._videoScaledH) / 2;
-
-    // store ratio for mapping video pixels to scaled pixels
-    this.videoScale = this._videoScaledW / vw;
 
     // Store screen dimensions for viewport check
     this._screenW = sw;
@@ -425,17 +434,23 @@ export default class Scene {
   videoPixelToCanvasPixel(px, py) {
     const vw = this.video_stream.videoWidth;
     const vh = this.video_stream.videoHeight;
-    if (!vw || !vh || !this._videoScaledW) return { x: 0, y: 0 };
+    if (!vw || !vh || !this._videoScaledW) {
+      if (!this._canvasPixel) this._canvasPixel = { x: 0, y: 0 };
+      this._canvasPixel.x = 0;
+      this._canvasPixel.y = 0;
+      return this._canvasPixel;
+    }
 
     // px proportion within video
     const nx = px / vw;
     const ny = py / vh;
 
     // canvas position (top-left origin)
-    const cx = this._videoLeft + nx * this._videoScaledW;
-    const cy = this._videoTop + ny * this._videoScaledH;
+    if (!this._canvasPixel) this._canvasPixel = { x: 0, y: 0 };
+    this._canvasPixel.x = this._videoLeft + nx * this._videoScaledW;
+    this._canvasPixel.y = this._videoTop + ny * this._videoScaledH;
 
-    return { x: cx, y: cy };
+    return this._canvasPixel;
   }
 
   screenToWorldAtZ(canvasX, canvasY, camera, targetZ) {
@@ -456,7 +471,11 @@ export default class Scene {
 
     const t = (targetZ - origin.z) / dir.z;
 
-    this._resultVec.copy(origin).add(dir.clone().multiplyScalar(t));
+    this._resultVec.set(
+      origin.x + dir.x * t,
+      origin.y + dir.y * t,
+      origin.z + dir.z * t,
+    );
     return this._resultVec;
   }
 
@@ -570,15 +589,64 @@ export default class Scene {
       this.video_stream.videoHeight > 0
     ) {
       this._faceDetectionRunning = true;
-      const options = { maxFaces: 1, flipHorizontal: true };
+      // Downscale video for detection to avoid WASM memory overflow
+      const vw = this.video_stream.videoWidth;
+      const vh = this.video_stream.videoHeight;
+      const scale = Math.min(1, this._detectionMaxWidth / vw);
+      const dw = Math.round(vw * scale);
+      const dh = Math.round(vh * scale);
+      if (
+        this._detectionCanvas.width !== dw ||
+        this._detectionCanvas.height !== dh
+      ) {
+        this._detectionCanvas.width = dw;
+        this._detectionCanvas.height = dh;
+      }
+      this._detectionCtx.drawImage(this.video_stream, 0, 0, dw, dh);
+      const invScale = 1 / scale;
       this.detector
-        .estimateFaces(this.video_stream, options)
+        .estimateFaces(this._detectionCanvas, this._detectionOptions)
         .then((result) => {
+          // Scale coordinates back to original video resolution
+          if (invScale !== 1) {
+            for (const face of result) {
+              for (const kp of face.keypoints) {
+                kp.x *= invScale;
+                kp.y *= invScale;
+                if (kp.z != null) kp.z *= invScale;
+              }
+              if (face.box) {
+                face.box.xMin *= invScale;
+                face.box.yMin *= invScale;
+                face.box.xMax *= invScale;
+                face.box.yMax *= invScale;
+                face.box.width *= invScale;
+                face.box.height *= invScale;
+              }
+            }
+          }
           this.face = result;
         })
         .catch(() => {})
         .finally(() => {
           this._faceDetectionRunning = false;
+          // Cache keypoint indices on first successful detection
+          if (!this._kpCached && this.face && this.face.length > 0) {
+            const kps = this.face[0].keypoints;
+            this._kpLeftEyeIdx = kps.findIndex((e) => e.name === "leftEyebrow");
+            this._kpRightEyeIdx = kps.findIndex(
+              (e) => e.name === "rightEyebrow",
+            );
+            this._kpCached = true;
+          }
+          // Periodically recreate detector to reset WASM heap (~every 3 min at 30fps)
+          this._detectionCount = (this._detectionCount || 0) + 1;
+          if (this._detectionCount >= 5000 && !this._detectorRecreating) {
+            this._detectorRecreating = true;
+            this.initFaceDetection().then(() => {
+              this._detectorRecreating = false;
+            });
+          }
         });
     }
 
@@ -606,29 +674,16 @@ export default class Scene {
       }
     }
 
-    // Update Bounding Box
     if (faceInViewport) {
       const f = this.face[0];
-      const box = f.box;
-
-      const vw = this.video_stream.videoWidth;
-      const vh = this.video_stream.videoHeight;
-
-      const scale = this.videoScale;
-      if (vw && vh && scale) {
-        const w = box.width * scale;
-        const h = box.height * scale;
-
-        const cx = box.xMin + box.width / 2;
-        const cy = box.yMin + box.height / 2;
-
-        const x = (cx - vw / 2) * scale;
-        const y = (vh / 2 - cy) * scale;
-      }
 
       // Update 3D Rotation
-      const leftEye = f.keypoints.find((e) => e.name === "leftEyebrow");
-      const rightEye = f.keypoints.find((e) => e.name === "rightEyebrow");
+      const leftEye = this._kpCached
+        ? f.keypoints[this._kpLeftEyeIdx]
+        : f.keypoints.find((e) => e.name === "leftEyebrow");
+      const rightEye = this._kpCached
+        ? f.keypoints[this._kpRightEyeIdx]
+        : f.keypoints.find((e) => e.name === "rightEyebrow");
       const forehead = f.keypoints[10];
 
       if (leftEye && rightEye && f.keypoints[152]) {

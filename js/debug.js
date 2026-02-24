@@ -92,30 +92,34 @@ window.addEventListener("load", () => {
   }, 3000);
 });
 
-// Automatic reload at midnight (00:00 user time)
-function scheduleAutoReloadAtMidnight() {
+// Automatic reload at midnight (00:00) and noon (12:00)
+function scheduleAutoReload() {
   const now = new Date();
-  const midnight = new Date();
-  midnight.setHours(24, 0, 0, 0);
 
-  if (midnight.getTime() <= now.getTime()) {
-    midnight.setDate(midnight.getDate() + 1);
+  // Find next 00:00 or 12:00
+  const targets = [0, 12];
+  let nearest = Infinity;
+
+  for (const hour of targets) {
+    const t = new Date();
+    t.setHours(hour, 0, 0, 0);
+    if (t.getTime() <= now.getTime()) {
+      t.setDate(t.getDate() + 1);
+    }
+    const diff = t.getTime() - now.getTime();
+    if (diff < nearest) nearest = diff;
   }
 
-  const timeUntilMidnight = midnight.getTime() - now.getTime();
-
   console.log(
-    `Auto-reload at midnight scheduled in ${Math.round(
-      timeUntilMidnight / 1000 / 60,
-    )} minutes`,
+    `Auto-reload scheduled in ${Math.round(nearest / 1000 / 60)} minutes`,
   );
 
   setTimeout(() => {
-    console.log("Midnight reached - reloading page...");
+    console.log("Scheduled reload - reloading page...");
     location.reload();
-  }, timeUntilMidnight);
+  }, nearest);
 }
 
-scheduleAutoReloadAtMidnight();
+scheduleAutoReload();
 
 export { handleFatalError, isFatalError };
