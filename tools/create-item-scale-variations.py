@@ -16,6 +16,10 @@ def create_scale_variations(directory):
 
     count = 0
     for filename in os.listdir(directory):
+        # Skip macOS resource fork files
+        if filename.startswith("._"):
+            continue
+
         # Process only PNG files
         if filename.lower().endswith(".png"):
             if "__512__8bit__" in filename or "__256__8bit__" in filename:

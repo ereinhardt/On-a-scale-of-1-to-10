@@ -13,6 +13,10 @@ def rename_images(directory):
     count = 0
     # Iterate through all files in the directory
     for filename in os.listdir(directory):
+        # Skip macOS resource fork files
+        if filename.startswith("._"):
+            continue
+
         # Process only PNG files
         if filename.lower().endswith(".png"):
             # Generate a unique ID (UUID)
