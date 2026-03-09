@@ -38,7 +38,7 @@ export default class Scene {
     // Downscaled canvas for face detection (reduces WASM memory usage)
     this._detectionCanvas = document.createElement("canvas");
     this._detectionCtx = this._detectionCanvas.getContext("2d");
-    this._detectionMaxWidth = 640;
+    this._detectionMaxWidth = 560;
     this._detectionOptions = { maxFaces: 1, flipHorizontal: true };
 
     //  CAMERA 1: ORTHOGRAPHIC (Video + UI)
@@ -49,18 +49,15 @@ export default class Scene {
 
     // RENDERER
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2)); // High-DPI support (capped at 1.5 for performance)
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0)); // High-DPI support (capped at 1.5 for performance)
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
     // Recover from WebGL context loss (can happen when MediaPipe competes for GPU)
-    this._contextLost = false;
     this.renderer.domElement.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
-      this._contextLost = true;
     });
     this.renderer.domElement.addEventListener("webglcontextrestored", () => {
-      this._contextLost = false;
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       // Force all textures to re-upload to GPU
       this.scene.traverse((obj) => {
@@ -87,6 +84,10 @@ export default class Scene {
 
     this.initImagePicker();
     this.initClickDetection();
+
+    // Listen for resize instead of polling every frame
+    this._resizeDirty = true;
+    window.addEventListener("resize", () => { this._resizeDirty = true; });
 
     // Start animation loop only after MediaPipe is fully initialized
     this.initFaceDetection().then(() => {
@@ -214,7 +215,6 @@ export default class Scene {
 
     const mat = new THREE.MeshBasicMaterial({
       map: tex,
-      side: THREE.DoubleSide,
     });
 
     this.video_mesh = new THREE.Mesh(geo, mat);
@@ -332,6 +332,10 @@ export default class Scene {
     this.bgMesh.layers.set(1);
     this.headAnchor.add(this.bgMesh);
 
+    // Reusable texture for item images (avoids new THREE.Texture every frame)
+    this._reusableTex = new THREE.Texture();
+    this._reusableTex.colorSpace = THREE.SRGBColorSpace;
+
     const geo = new THREE.PlaneGeometry(5, 5);
     this.textureMap = new THREE.MeshBasicMaterial({
       map: startTex,
@@ -353,7 +357,6 @@ export default class Scene {
     const labelMat = new THREE.MeshBasicMaterial({
       map: this.createLabelTexture(""),
       transparent: true,
-      side: THREE.DoubleSide,
       depthWrite: false,
     });
     this.textMesh = new THREE.Mesh(labelGeo, labelMat);
@@ -534,19 +537,12 @@ export default class Scene {
     return THREE.MathUtils.mapLinear(m, 0.4, 1.2, 20, -30);
   }
 
-  safeDispose(texture) {
-    if (!texture) return;
-    try {
-      texture.dispose();
-    } catch (e) {}
-  }
-
   createLabelTexture(text) {
     // Reuse a single canvas and texture for the label
     if (!this._labelCanvas) {
       this._labelCanvas = document.createElement("canvas");
-      this._labelCanvas.width = 2048;
-      this._labelCanvas.height = 256;
+      this._labelCanvas.width = 1024;
+      this._labelCanvas.height = 128;
       this._labelCtx = this._labelCanvas.getContext("2d");
       this._labelTex = new THREE.CanvasTexture(this._labelCanvas);
       this._labelTex.colorSpace = THREE.SRGBColorSpace;
@@ -562,7 +558,7 @@ export default class Scene {
       const displayText =
         text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 
-      const fontSize = 100;
+      const fontSize = 50;
       ctx.font = `${fontSize}px Helvetica, Arial, sans-serif`;
       ctx.fillStyle = "dimgrey";
       ctx.textAlign = "center";
@@ -575,13 +571,19 @@ export default class Scene {
   }
   // ANIMATE
   async animate(time) {
-    this.checkResize();
+    if (this._resizeDirty) {
+      this._resizeDirty = false;
+      this.checkResize();
+    }
 
     this.renderer.autoClear = false;
     this.renderer.clear();
 
     // Face Mesh (non-blocking: run detection in background, use latest result)
+    // Skip every other frame to save resources
+    this._frameCount = (this._frameCount || 0) + 1;
     if (
+      this._frameCount % 2 === 0 &&
       !this._faceDetectionRunning &&
       this.detector &&
       this.video_stream.readyState >= 2 &&
@@ -639,9 +641,9 @@ export default class Scene {
             );
             this._kpCached = true;
           }
-          // Periodically recreate detector to reset WASM heap (~every 3 min at 30fps)
+          // Periodically recreate detector to reset WASM heap (~every 3 min at ~15 detections/sec)
           this._detectionCount = (this._detectionCount || 0) + 1;
-          if (this._detectionCount >= 5000 && !this._detectorRecreating) {
+          if (this._detectionCount >= 2500 && !this._detectorRecreating) {
             this._detectorRecreating = true;
             this.initFaceDetection().then(() => {
               this._detectorRecreating = false;
@@ -748,20 +750,10 @@ export default class Scene {
         if (nextImage && nextImage.image) {
           this.game.currentImage = nextImage;
 
-          if (
-            !this._contextLost &&
-            this.textureMap.map &&
-            this.textureMap.map !== this.startScreen &&
-            this.textureMap.map !== this.thankYouScreen &&
-            this.textureMap.map !== this.revealScreen
-          ) {
-            this.safeDispose(this.textureMap.map);
-          }
-          const tex = new THREE.Texture(this.game.currentImage.image);
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.needsUpdate = true;
+          this._reusableTex.image = this.game.currentImage.image;
+          this._reusableTex.needsUpdate = true;
 
-          this.textureMap.map = tex;
+          this.textureMap.map = this._reusableTex;
           this.textureMap.needsUpdate = true;
 
           if (this.textMesh) {
@@ -781,19 +773,11 @@ export default class Scene {
       this.lastSelectedImageBeforeReset
     ) {
       this.game.currentImage = this.lastSelectedImageBeforeReset;
-      if (
-        !this._contextLost &&
-        this.textureMap.map &&
-        this.textureMap.map !== this.startScreen &&
-        this.textureMap.map !== this.thankYouScreen &&
-        this.textureMap.map !== this.revealScreen
-      ) {
-        this.safeDispose(this.textureMap.map);
-      }
-      const tex = new THREE.Texture(this.game.currentImage.image);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.needsUpdate = true;
-      this.textureMap.map = tex;
+
+      this._reusableTex.image = this.game.currentImage.image;
+      this._reusableTex.needsUpdate = true;
+
+      this.textureMap.map = this._reusableTex;
       this.textureMap.needsUpdate = true;
 
       if (this.textMesh) {
