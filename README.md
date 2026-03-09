@@ -39,4 +39,5 @@ python create-indexed-json.py
 
 ## Start
 
-Upload to your Webserver.
+1. Create a folder named ```item-data``` in the root directory and move all processed items and the ```indexed_json.json``` file into it.
+2. Upload everything combined to your Webserver.
