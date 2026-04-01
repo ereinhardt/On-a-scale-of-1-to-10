@@ -2,7 +2,7 @@ import { delay, repositionField } from "./util.js";
 
 const ANIMATION_DURATION = 250; // ms for repositioning
 const SCORE_REVEAL_DELAY = 250; // ms between score displays
-const PAUSE_BEFORE_SORT = 250; // ms pause before sorting begins
+const PAUSE_BEFORE_SORT = 100; // ms pause before sorting begins
 
 // Fetches global averages
 async function fetchGlobalAverages() {
@@ -48,10 +48,10 @@ export async function revealAnimation(board) {
         container.children[i]?.querySelector(".item-box-number");
       if (numElement) numElement.innerText = score;
     }
-    await delay(SCORE_REVEAL_DELAY);
+    if (i < 9) await delay(SCORE_REVEAL_DELAY);
   }
 
-  await delay(PAUSE_BEFORE_SORT);
+  if (PAUSE_BEFORE_SORT > 0) await delay(PAUSE_BEFORE_SORT);
 
   // Perform sorting with selection sort algorithm
   for (let targetPos = 0; targetPos < 10; targetPos++) {
