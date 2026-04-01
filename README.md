@@ -16,6 +16,10 @@ by Erik Anton Reinhardt, Finn Jakob Reinhardt.<br>
 1024__8bit__CATEGORY-NAME__ITEM-LABEL.png
 Example: 1024__8bit__Food__Apple.png
 ```
+**Note**:
+
+Do not use any special characters in the Item-Filename (only ```A–Z```, ```a–z```, ```0–9```, ```_```, and ```-``` are allowed).
+
 
 ## Tools (Order important)
 
