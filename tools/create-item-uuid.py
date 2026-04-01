@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import sys
 
@@ -30,6 +31,11 @@ def rename_images(directory):
                     original_name = rest
             else:
                 original_name = filename
+
+            # Remove special characters from original name (keep A-Za-z0-9_- and .)
+            name_part, ext = os.path.splitext(original_name)
+            name_part = re.sub(r'[^A-Za-z0-9_\-]', '', name_part)
+            original_name = name_part + ext
 
             # Create new filename: ID__OriginalFileName.png
             new_filename = f"{unique_id}__{original_name}"
