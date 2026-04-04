@@ -344,6 +344,12 @@ for ($i = 0; $i < count($data); $i++) {
 
     array_push($global_average['items'][$current_image]["sums"], $current_index);
 
+    // Limit sums to the last 100 ratings, remove oldest entries
+    if (count($global_average['items'][$current_image]["sums"]) > 100) {
+        $global_average['items'][$current_image]["sums"] = array_values(
+            array_slice($global_average['items'][$current_image]["sums"], -100)
+        );
+    }
 
     $sums = $global_average['items'][$current_image]["sums"];
     $count = count($sums);

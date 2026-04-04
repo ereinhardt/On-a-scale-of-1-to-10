@@ -5,7 +5,7 @@ import {
 } from "./reveal.js";
 
 export const FOR_REVEAL_PAUSE_MS = 1500;
-export const AFTER_REVEAL_PAUSE_MS = 250;
+export const AFTER_REVEAL_PAUSE_MS = 500;
 
 export const GAME_STATE = Object.freeze({
   STARTED: 0,
