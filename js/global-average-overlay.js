@@ -180,7 +180,7 @@ setInterval(async () => {
   isRunning = true;
 
   try {
-    const response = await fetch("backend/send-global-average.php").catch(() => null);
+    const response = await fetch("backend/send-global-average.php?t=" + Date.now()).catch(() => null);
     if (!response || !response.ok) {
       isRunning = false;
       return;

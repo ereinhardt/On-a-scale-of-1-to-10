@@ -42,7 +42,7 @@
   }
 
   function updateItemStats() {
-    fetch(statsApi)
+    fetch(statsApi + "?t=" + Date.now())
       .then((response) => response.json())
       .then((data) => {
         if (data["total-stats"]) {
