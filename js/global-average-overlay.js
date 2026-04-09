@@ -7,7 +7,7 @@ import {
   delay,
 } from "./util.js";
 
-const INTERVALL_MS = 5000;
+const INTERVALL_MS = 10000;
 const ANIMATION_DURATION_MS = 250;
 const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
@@ -207,7 +207,12 @@ setInterval(async () => {
         createItemBox(url, average, current_name, current_img);
       }
     } else {
-      // Update scores
+      // Refresh imageHash to pick up renamed/new items (cache-bust to avoid stale data)
+      imageHash = flattenImages(
+        await readJsonFile("item-data/indexed_json.json?t=" + Date.now()),
+      );
+
+      // Update scores and remove orphaned elements (ID no longer in data)
       const fields = document.getElementsByClassName(
         "average-item-box-container",
       );
@@ -227,6 +232,9 @@ setInterval(async () => {
             const numberEl = field.querySelector(".average-item-box-number");
             if (numberEl) numberEl.innerText = newScore;
           }
+        } else {
+          // Item no longer in backend data (renamed or deleted) -> remove from DOM
+          field.remove();
         }
       }
 
@@ -246,6 +254,10 @@ setInterval(async () => {
 
           const current_name = extractNameFromPath(id);
           const img_path = imageHash.find((str) => str.includes(id));
+          if (!img_path) {
+            pendingItems.delete(id);
+            continue;
+          }
           const url = "item-data/" + img_path.replace("**", RESOLUTION);
           const average = data[id]["global-average"];
 
