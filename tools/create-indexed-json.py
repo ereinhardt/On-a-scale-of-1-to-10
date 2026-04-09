@@ -6,6 +6,49 @@ from os import listdir
 
 EXTENSION = ".json"
 CACHE = set()
+VALID_UUIDS = set()
+
+REQUIRED_RESOLUTIONS = {"256", "512", "1024"}
+
+
+def prescan_directory(current_path, start_dir):
+    """Pre-scan all files and group by UUID to validate name consistency across resolutions."""
+    uuid_variants = {}  # uuid -> {resolution: label_part}
+
+    for item in sorted(current_path.rglob("*.png")):
+        if item.name.startswith("._"):
+            continue
+
+        file_path = str(item.relative_to(start_dir))
+        id_res = re.search(r"^(.*)/(.*)__(\d{1,4})__(.*)$", file_path)
+        if not id_res:
+            continue
+
+        uuid = id_res.group(2)
+        resolution = id_res.group(3)
+        label_part = id_res.group(4)
+
+        uuid_variants.setdefault(uuid, {})[resolution] = label_part
+
+    valid = set()
+    for uuid, variants in uuid_variants.items():
+        if not REQUIRED_RESOLUTIONS.issubset(variants.keys()):
+            missing = REQUIRED_RESOLUTIONS - variants.keys()
+            existing = next(iter(variants))
+            full_name = f"{uuid}__{existing}__{variants[existing]}"
+            print(f"WARNING: {full_name} is missing resolutions: {missing} – skipped")
+            continue
+
+        labels = {variants[res] for res in REQUIRED_RESOLUTIONS}
+        if len(labels) != 1:
+            print(f"WARNING: {uuid} has inconsistent names across resolutions – skipped:")
+            for res in sorted(REQUIRED_RESOLUTIONS):
+                print(f"  {uuid}__{res}__{variants[res]}")
+            continue
+
+        valid.add(uuid)
+
+    return valid
 
 
 def getPath(current_path, start_dir):
@@ -29,6 +72,9 @@ def getPath(current_path, start_dir):
         id = id_res.group(2)
 
         if id in CACHE:
+            return []
+
+        if id not in VALID_UUIDS:
             return []
 
         file_path = re.sub(
@@ -85,6 +131,10 @@ def main():
 
     output_file_name = args.output_file_name
     output_dir = input_dir.joinpath(output_file_name + EXTENSION)
+
+    global VALID_UUIDS
+    VALID_UUIDS = prescan_directory(input_dir, input_dir)
+
     indexed_dir = traverse_dir(input_dir, input_dir)
 
     with open(output_dir, "w+", encoding="utf-8") as f:
