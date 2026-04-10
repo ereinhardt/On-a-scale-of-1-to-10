@@ -11,7 +11,7 @@ function sendResponse($message, $statuscode): never
 }
 
 if (!file_exists(filename: $dataFile)) {
-    sendResponse("global-index.json not found at: " . $dataFile, 500);
+    sendResponse("global-index.json not found", 500);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

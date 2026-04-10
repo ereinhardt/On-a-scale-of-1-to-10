@@ -29,9 +29,9 @@ STEP A: Classical Average
 STEP B: Weighted Average (Global Average Base)
   Why weighted? With 1000 existing ratings, a new rating would barely affect
   the classical average. This is unfair to recent raters.
-  
+
   Formula: New = (Previous Average × 0.8) + (New Rating × 0.2)
-  
+
   Previous average (without new rating): (7+8+6+9)÷4 = 7.5
   Calculated average: 7.5 × 0.8 + 8 × 0.2 = 6.0 + 1.6 = 7.6
 
@@ -84,7 +84,7 @@ When an item (e.g., Pizza at 7.6001) receives a new rating:
   1. Old global-average (7.6001) is freed
   2. New average is calculated (e.g., 7.52)
   3. New unique slot is found for 7.52
-  
+
 --------------------------------------------------------------------------------
 5. CONCURRENCY: FILE LOCKING
 --------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ function sendResponse($message, $statuscode): never
 }
 
 if (!file_exists(filename: $indexJsonFile)) {
-    sendResponse("indexed_json.json not found at: " . $indexJsonFile, 500);
+    sendResponse("indexed_json.json not found", 500);
 }
 
 function findUniqueAverage(float $targetAverage, array $items, string $currentImage): float
@@ -147,7 +147,7 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
 
         // Generate ALL possible candidates for this precision
         $allCandidates = [];
-        
+
         foreach ($bases as $base) {
             // Add base value itself
             $baseCandidate = round($base, $precision);

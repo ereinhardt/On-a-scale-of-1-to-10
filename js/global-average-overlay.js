@@ -8,7 +8,7 @@ import {
 
 const INTERVALL_MS = 10000;
 const ANIMATION_DURATION_MS = 250;
-const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
+const MAX_ANIMATED_ITEMS = 150;
 const RESOLUTION = isPhone ? "256" : "512";
 const OVERLAY_NODE = document.getElementById(
   "global-average-overlay-items-container",
@@ -19,6 +19,11 @@ let imageHash = [];
 
 // IDs of items currently being added (prevents duplicates)
 const pendingItems = new Set();
+
+function resolveItemUrl(id) {
+  const img_path = imageHash.find((str) => str.includes(id));
+  return "item-data/" + img_path.replace("**", RESOLUTION);
+}
 
 // Flattens nested objects/arrays into a list of strings
 function flattenImages(data) {
@@ -45,7 +50,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
     item_box_container.style.opacity = "0";
     item_box_container.style.maxHeight = "0";
     item_box_container.style.overflow = "hidden";
-    item_box_container.style.transition = `opacity ${ANIMATION_DURATION_S}s ease-in-out, max-height ${ANIMATION_DURATION_S}s ease-in-out`;
+    item_box_container.style.transition = `opacity ${ANIMATION_DURATION_MS / 1000}s ease-in-out, max-height ${ANIMATION_DURATION_MS / 1000}s ease-in-out`;
   }
 
   const item_box_number = document.createElement("div");
@@ -85,21 +90,9 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   item_box_container.appendChild(item_box);
 
   // Insert at correct position (ascending by score)
-  const existingItems = Array.from(OVERLAY_NODE.children);
-  let insertBefore = null;
-  for (const item of existingItems) {
-    const itemScore = parseFloat(item.dataset.score) || 0;
-    if (score < itemScore) {
-      insertBefore = item;
-      break;
-    }
-  }
-
-  if (insertBefore) {
-    OVERLAY_NODE.insertBefore(item_box_container, insertBefore);
-  } else {
-    OVERLAY_NODE.appendChild(item_box_container);
-  }
+  const insertBefore = Array.from(OVERLAY_NODE.children)
+    .find((item) => score < (parseFloat(item.dataset.score) || 0));
+  OVERLAY_NODE.insertBefore(item_box_container, insertBefore || null);
 
   if (fadeIn) {
     const targetHeight = getComputedStyle(document.documentElement).getPropertyValue("--item-size").trim();
@@ -125,21 +118,38 @@ function ascendingOrderData(data) {
     .sort((a, b) => data[a]["global-average"] - data[b]["global-average"]);
 }
 
+function isOverlayOpen() {
+  const overlay = document.getElementById("global-average-overlay");
+  return !!overlay && overlay.classList.contains("open");
+}
+
 // Animation
 // Sorts DOM elements according to desired order (FLIP approach)
-function sortFieldsByOrder(desiredOrder) {
+// Computes desired order from current DOM scores at execution time
+function sortFieldsByOrder() {
   animationQueue.add(async () => {
     const fields = document.getElementsByClassName("average-item-box-container");
     if (fields.length === 0) return;
 
     const fieldsArray = Array.from(fields);
-    const currentOrder = fieldsArray.map((f) => f.dataset.id);
+    const desiredElements = fieldsArray
+      .slice()
+      .sort(
+        (a, b) =>
+          parseFloat(a.dataset.score) - parseFloat(b.dataset.score) ||
+          a.dataset.id.localeCompare(b.dataset.id),
+      );
 
-    const existingDesiredOrder = desiredOrder.filter((id) =>
-      currentOrder.includes(id),
-    );
+    if (desiredElements.every((el, i) => fieldsArray[i] === el)) return;
 
-    if (existingDesiredOrder.every((id, i) => currentOrder[i] === id)) return;
+    const parent = fieldsArray[0].parentElement;
+    const shouldAnimate =
+      isOverlayOpen() && fieldsArray.length <= MAX_ANIMATED_ITEMS;
+
+    if (!shouldAnimate) {
+      desiredElements.forEach((el) => parent.appendChild(el));
+      return;
+    }
 
     // Force content-visibility for correct measurements
     fieldsArray.forEach((f) => (f.style.contentVisibility = "visible"));
@@ -152,15 +162,11 @@ function sortFieldsByOrder(desiredOrder) {
     });
 
     // Reorder DOM to desired order
-    const parent = fieldsArray[0].parentElement;
-    for (const id of existingDesiredOrder) {
-      const el = fieldsArray.find((f) => f.dataset.id === id);
-      if (el) parent.appendChild(el);
-    }
+    desiredElements.forEach((el) => parent.appendChild(el));
 
     // FLIP: Calculate deltas and offset items back to old positions
     const movedItems = [];
-    Array.from(fields).forEach((f) => {
+    desiredElements.forEach((f) => {
       const oldTop = oldPositions.get(f.dataset.id);
       const newTop = f.getBoundingClientRect().top;
       const delta = oldTop - newTop;
@@ -171,18 +177,19 @@ function sortFieldsByOrder(desiredOrder) {
       }
     });
 
-    // Animate each moved item one by one to its new position
-    for (const item of movedItems) {
-      item.offsetHeight;
-      item.style.transition = `transform ${ANIMATION_DURATION_MS}ms ease`;
-      item.style.transform = "none";
+    if (movedItems.length > 0) {
+      // Animate all moved items in parallel to keep large lists responsive
+      fieldsArray[0]?.offsetHeight;
+      movedItems.forEach((item) => {
+        item.style.transition = `transform ${ANIMATION_DURATION_MS}ms ease`;
+        item.style.transform = "none";
+      });
+
       await delay(ANIMATION_DURATION_MS);
-      item.style.transition = "";
-      item.style.contentVisibility = "";
     }
 
-    // Final cleanup
-    Array.from(fields).forEach((f) => {
+    // Cleanup
+    fieldsArray.forEach((f) => {
       f.style.contentVisibility = "";
       f.style.transition = "";
       f.style.transform = "";
@@ -200,7 +207,6 @@ setInterval(async () => {
   try {
     const response = await fetch("backend/send-global-average.php", { cache: "no-store" }).catch(() => null);
     if (!response || !response.ok) {
-      isRunning = false;
       return;
     }
     let fullData = await response.json();
@@ -215,14 +221,9 @@ setInterval(async () => {
       const images = ascendingOrderData(data);
 
       for (const current_img of images) {
-        const average = data[current_img]["global-average"];
-        if (average < 1) continue;
-
         const current_name = extractNameFromPath(current_img);
-        const img_path = imageHash.find((str) => str.includes(current_img));
-        const url = "item-data/" + img_path.replace("**", RESOLUTION);
-
-        createItemBox(url, average, current_name, current_img);
+        const url = resolveItemUrl(current_img);
+        createItemBox(url, data[current_img]["global-average"], current_name, current_img);
       }
     } else {
       // Update scores
@@ -253,6 +254,8 @@ setInterval(async () => {
         document.getElementsByClassName("average-item-box-container"),
       ).map((f) => f.dataset.id);
       const desiredOrder = ascendingOrderData(data);
+      const shouldAnimateAdds =
+        isOverlayOpen() && currentIds.length <= MAX_ANIMATED_ITEMS;
 
       for (const id of desiredOrder) {
         if (
@@ -263,9 +266,14 @@ setInterval(async () => {
           pendingItems.add(id); // Mark as "being added"
 
           const current_name = extractNameFromPath(id);
-          const img_path = imageHash.find((str) => str.includes(id));
-          const url = "item-data/" + img_path.replace("**", RESOLUTION);
+          const url = resolveItemUrl(id);
           const average = data[id]["global-average"];
+
+          if (!shouldAnimateAdds) {
+            createItemBox(url, average, current_name, id, false);
+            pendingItems.delete(id);
+            continue;
+          }
 
           animationQueue.add(async () => {
             createItemBox(url, average, current_name, id, true);
@@ -275,7 +283,7 @@ setInterval(async () => {
         }
       }
 
-      sortFieldsByOrder(desiredOrder);
+      sortFieldsByOrder();
     }
   } finally {
     isRunning = false;

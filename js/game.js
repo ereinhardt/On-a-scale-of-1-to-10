@@ -4,8 +4,8 @@ import {
   resetContainerOrder,
 } from "./reveal.js";
 
-export const FOR_REVEAL_PAUSE_MS = 1500;
-export const AFTER_REVEAL_PAUSE_MS = 250;
+const FOR_REVEAL_PAUSE_MS = 1500;
+const AFTER_REVEAL_PAUSE_MS = 250;
 
 export const GAME_STATE = Object.freeze({
   STARTED: 0,
@@ -31,7 +31,7 @@ function serializeBoard(board) {
     });
 }
 
-export class Field {
+class Field {
   constructor(image, index) {
     this.image = image;
     this.index = index;

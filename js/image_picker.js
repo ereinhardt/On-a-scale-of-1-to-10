@@ -1,6 +1,6 @@
 import { download_image } from "./util.js";
 
-export class ImageItem {
+class ImageItem {
   constructor(id, image) {
     this.id = id;
     this.image = image;

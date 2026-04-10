@@ -21,7 +21,7 @@ async function setupCamera() {
 
     await videoElement.play();
 
-    const scene = new Scene(videoElement);
+    new Scene(videoElement);
 
     document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState === "visible") {

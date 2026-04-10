@@ -121,5 +121,3 @@ function scheduleAutoReload() {
 }
 
 scheduleAutoReload();
-
-export { handleFatalError, isFatalError };
