@@ -2,7 +2,6 @@ import {
   extractNameFromPath,
   isPhone,
   readJsonFile,
-  repositionField,
   animationQueue,
   delay,
 } from "./util.js";
@@ -124,52 +123,68 @@ function ascendingOrderData(data) {
 }
 
 // Animation
-// Sorts DOM elements according to desired order
+// Sorts DOM elements according to desired order (FLIP approach)
 function sortFieldsByOrder(desiredOrder) {
-  const fields = document.getElementsByClassName("average-item-box-container");
-  if (fields.length === 0) return;
+  animationQueue.add(async () => {
+    const fields = document.getElementsByClassName("average-item-box-container");
+    if (fields.length === 0) return;
 
-  const currentOrder = Array.from(fields).map((f) => f.dataset.id);
+    const fieldsArray = Array.from(fields);
+    const currentOrder = fieldsArray.map((f) => f.dataset.id);
 
-  const existingDesiredOrder = desiredOrder.filter((id) =>
-    currentOrder.includes(id),
-  );
+    const existingDesiredOrder = desiredOrder.filter((id) =>
+      currentOrder.includes(id),
+    );
 
-  // Find all items that need to move
-  const itemsToMove = [];
-  for (let i = 0; i < existingDesiredOrder.length; i++) {
-    const desiredId = existingDesiredOrder[i];
-    const currentIndex = currentOrder.indexOf(desiredId);
+    if (existingDesiredOrder.every((id, i) => currentOrder[i] === id)) return;
 
-    if (currentIndex !== i && currentIndex !== -1) {
-      itemsToMove.push({ desiredId, targetIndex: i });
-    }
-  }
+    // Force content-visibility for correct measurements
+    fieldsArray.forEach((f) => (f.style.contentVisibility = "visible"));
+    fieldsArray[0]?.offsetHeight;
 
-  // Add one queue entry per item (not per step)
-  for (const { desiredId, targetIndex } of itemsToMove) {
-    animationQueue.add(async () => {
-      const freshFields = document.getElementsByClassName(
-        "average-item-box-container",
-      );
-      if (freshFields.length === 0 || targetIndex >= freshFields.length) {
-        await delay(ANIMATION_DURATION_MS);
-        return;
-      }
-
-      const freshOrder = Array.from(freshFields).map((f) => f.dataset.id);
-      const freshFromIndex = freshOrder.indexOf(desiredId);
-
-      if (
-        freshFromIndex !== -1 &&
-        freshFromIndex !== targetIndex &&
-        targetIndex < freshFields.length
-      ) {
-        repositionField(freshFields, targetIndex, freshFromIndex);
-      }
-      await delay(ANIMATION_DURATION_MS);
+    // FLIP: Record old positions
+    const oldPositions = new Map();
+    fieldsArray.forEach((f) => {
+      oldPositions.set(f.dataset.id, f.getBoundingClientRect().top);
     });
-  }
+
+    // Reorder DOM to desired order
+    const parent = fieldsArray[0].parentElement;
+    for (const id of existingDesiredOrder) {
+      const el = fieldsArray.find((f) => f.dataset.id === id);
+      if (el) parent.appendChild(el);
+    }
+
+    // FLIP: Calculate deltas and offset items back to old positions
+    const movedItems = [];
+    Array.from(fields).forEach((f) => {
+      const oldTop = oldPositions.get(f.dataset.id);
+      const newTop = f.getBoundingClientRect().top;
+      const delta = oldTop - newTop;
+      if (Math.abs(delta) > 0.5) {
+        f.style.transition = "none";
+        f.style.transform = `translateY(${delta}px)`;
+        movedItems.push(f);
+      }
+    });
+
+    // Animate each moved item one by one to its new position
+    for (const item of movedItems) {
+      item.offsetHeight;
+      item.style.transition = `transform ${ANIMATION_DURATION_MS}ms ease`;
+      item.style.transform = "none";
+      await delay(ANIMATION_DURATION_MS);
+      item.style.transition = "";
+      item.style.contentVisibility = "";
+    }
+
+    // Final cleanup
+    Array.from(fields).forEach((f) => {
+      f.style.contentVisibility = "";
+      f.style.transition = "";
+      f.style.transform = "";
+    });
+  });
 }
 
 let isRunning = false;

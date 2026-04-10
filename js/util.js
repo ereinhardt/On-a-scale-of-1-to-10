@@ -44,9 +44,14 @@ export function repositionField(fields, targetIndex, startIndex) {
   const target = fieldsArray[targetIndex];
   const parent = field.parentElement;
 
-  // Force content-visibility rendering for animation participants
-  field.style.contentVisibility = "visible";
-  target.style.contentVisibility = "visible";
+  // Force content-visibility rendering for all animation participants
+  const minIdx = Math.min(targetIndex, startIndex);
+  const maxIdx = Math.max(targetIndex, startIndex);
+  for (let i = minIdx; i <= maxIdx; i++) {
+    fieldsArray[i].style.contentVisibility = "visible";
+  }
+  // Force reflow so getBoundingClientRect returns correct values
+  field.offsetHeight;
 
   const fieldRect = field.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
