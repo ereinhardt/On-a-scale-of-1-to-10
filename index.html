@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -120,7 +120,9 @@
             overlay.classList.remove("open");
             btn.textContent = "⌀ Global Average";
             clearInactivityTimer();
-            setTimeout(() => { if (!isOpen) overlay.style.display = "none"; }, 250);
+            setTimeout(() => {
+              if (!isOpen) overlay.style.display = "none";
+            }, 250);
           }
         }
 
@@ -158,7 +160,7 @@
             requestAnimationFrame(() => overlay.classList.add("open"));
             btn.textContent = "× Return to Input";
             document.getElementById(
-              "global-average-overlay-items-container"
+              "global-average-overlay-items-container",
             ).scrollTop = 0;
             resetInactivityTimer();
           } else {
@@ -166,7 +168,9 @@
             overlay.classList.remove("open");
             btn.textContent = "⌀ Global Average";
             clearInactivityTimer();
-            setTimeout(() => { if (!isOpen) overlay.style.display = "none"; }, 250);
+            setTimeout(() => {
+              if (!isOpen) overlay.style.display = "none";
+            }, 250);
           }
         });
       })();

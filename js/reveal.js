@@ -7,12 +7,13 @@ const PAUSE_BEFORE_SORT = 100; // ms pause before sorting begins
 // Fetches global averages
 async function fetchGlobalAverages() {
   try {
-    const response = await fetch("backend/send-global-average.php", { cache: "no-store" });
+    const response = await fetch("backend/send-global-average.php", {
+      cache: "no-store",
+    });
     if (!response.ok) return null;
     const data = await response.json();
     return data.items || {};
   } catch (e) {
-    console.error("Error fetching global averages:", e);
     return null;
   }
 }
@@ -30,7 +31,6 @@ function getFilename(path) {
 export async function revealAnimation(board) {
   const globalAverages = await fetchGlobalAverages();
   if (!globalAverages) {
-    console.warn("No global averages available, skipping reveal animation");
     return;
   }
 

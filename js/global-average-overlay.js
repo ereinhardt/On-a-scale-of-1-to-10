@@ -90,12 +90,15 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   item_box_container.appendChild(item_box);
 
   // Insert at correct position (ascending by score)
-  const insertBefore = Array.from(OVERLAY_NODE.children)
-    .find((item) => score < (parseFloat(item.dataset.score) || 0));
+  const insertBefore = Array.from(OVERLAY_NODE.children).find(
+    (item) => score < (parseFloat(item.dataset.score) || 0),
+  );
   OVERLAY_NODE.insertBefore(item_box_container, insertBefore || null);
 
   if (fadeIn) {
-    const targetHeight = getComputedStyle(document.documentElement).getPropertyValue("--item-size").trim();
+    const targetHeight = getComputedStyle(document.documentElement)
+      .getPropertyValue("--item-size")
+      .trim();
 
     requestAnimationFrame(() => {
       item_box_container.style.opacity = "1";
@@ -128,7 +131,9 @@ function isOverlayOpen() {
 // Computes desired order from current DOM scores at execution time
 function sortFieldsByOrder() {
   animationQueue.add(async () => {
-    const fields = document.getElementsByClassName("average-item-box-container");
+    const fields = document.getElementsByClassName(
+      "average-item-box-container",
+    );
     if (fields.length === 0) return;
 
     const fieldsArray = Array.from(fields);
@@ -205,7 +210,9 @@ setInterval(async () => {
   isRunning = true;
 
   try {
-    const response = await fetch("backend/send-global-average.php", { cache: "no-store" }).catch(() => null);
+    const response = await fetch("backend/send-global-average.php", {
+      cache: "no-store",
+    }).catch(() => null);
     if (!response || !response.ok) {
       return;
     }
@@ -223,7 +230,12 @@ setInterval(async () => {
       for (const current_img of images) {
         const current_name = extractNameFromPath(current_img);
         const url = resolveItemUrl(current_img);
-        createItemBox(url, data[current_img]["global-average"], current_name, current_img);
+        createItemBox(
+          url,
+          data[current_img]["global-average"],
+          current_name,
+          current_img,
+        );
       }
     } else {
       // Update scores

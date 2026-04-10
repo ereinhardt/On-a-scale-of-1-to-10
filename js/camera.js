@@ -48,13 +48,10 @@ async function setupCamera() {
               await videoElement.play();
             }
           }
-        } catch (e) {
-          //   console.error("Error resuming camera:", e);
-        }
+        } catch (e) {}
       }
     });
   } catch (error) {
-    // console.error(error);
     alert(
       "Camera not found. Please make sure you have a camera connected and have granted permission to use it.",
     );

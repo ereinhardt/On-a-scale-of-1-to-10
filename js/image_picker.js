@@ -134,7 +134,8 @@ export default class ImagePicker {
     const selectedItem = this.queue.splice(index >= 0 ? index : 0, 1)[0];
 
     // Refill queue: start downloads until queue + pending reaches target
-    const needed = this.queue_length - this.queue.length - this._pendingDownloads;
+    const needed =
+      this.queue_length - this.queue.length - this._pendingDownloads;
     for (let i = 0; i < needed; i++) {
       this.setImage(this.getRandomUrl(), -1);
     }

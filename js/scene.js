@@ -87,7 +87,9 @@ export default class Scene {
 
     // Listen for resize instead of polling every frame
     this._resizeDirty = true;
-    window.addEventListener("resize", () => { this._resizeDirty = true; });
+    window.addEventListener("resize", () => {
+      this._resizeDirty = true;
+    });
 
     // Start animation loop only after MediaPipe is fully initialized
     this.initFaceDetection().then(() => {
