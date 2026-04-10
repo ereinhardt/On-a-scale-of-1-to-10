@@ -7,7 +7,7 @@ const PAUSE_BEFORE_SORT = 100; // ms pause before sorting begins
 // Fetches global averages
 async function fetchGlobalAverages() {
   try {
-    const response = await fetch("backend/send-global-average.php");
+    const response = await fetch("backend/send-global-average.php", { cache: "no-store" });
     if (!response.ok) return null;
     const data = await response.json();
     return data.items || {};
