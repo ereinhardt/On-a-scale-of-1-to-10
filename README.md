@@ -18,9 +18,7 @@ Example: 1024__8bit__Food__Apple.png
 ```
 **Note**:
 
-- Do not use any special characters in the Item-Filename (only ```A–Z```, ```a–z```, ```0–9```, ```_```, and ```-``` are allowed).
-- ITEM-LABEL can be changed later by uploading updated files and a new index. The system will automatically match and sync the rating as long as the UUID remains the same.
-
+Do not use any special characters in the Item-Filename (only ```A–Z```, ```a–z```, ```0–9```, ```_```, and ```-``` are allowed).
 
 ## Tools (Order important)
 
