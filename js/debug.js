@@ -88,7 +88,6 @@ window.addEventListener("unhandledrejection", (event) => {
 window.addEventListener("load", () => {
   setTimeout(() => {
     clearReloadCount();
-    console.log("Page loaded successfully, reload counter reset.");
   }, 3000);
 });
 
@@ -115,7 +114,6 @@ function scheduleAutoReload() {
   );
 
   setTimeout(() => {
-    console.log("Scheduled reload - reloading page...");
     location.reload();
   }, nearest);
 }
