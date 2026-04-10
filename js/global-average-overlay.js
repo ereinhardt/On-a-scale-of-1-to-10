@@ -6,7 +6,7 @@ import {
   delay,
 } from "./util.js";
 
-const INTERVALL_MS = 5000;
+const INTERVALL_MS = 10000;
 const ANIMATION_DURATION_MS = 250;
 const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 const RESOLUTION = isPhone ? "256" : "512";
@@ -32,6 +32,9 @@ function flattenImages(data) {
 function createItemBox(img, score, name, id, fadeIn = false) {
   // Prevent items with score < 1
   if (score < 1) return null;
+
+  // Prevent duplicate items
+  if (OVERLAY_NODE.querySelector(`[data-id="${id}"]`)) return null;
 
   const item_box_container = document.createElement("div");
   item_box_container.classList.add("average-item-box-container");
@@ -99,7 +102,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   }
 
   if (fadeIn) {
-    const targetHeight = item_box_container.scrollHeight + "px";
+    const targetHeight = getComputedStyle(document.documentElement).getPropertyValue("--item-size").trim();
 
     requestAnimationFrame(() => {
       item_box_container.style.opacity = "1";
