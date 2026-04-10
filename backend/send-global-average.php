@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/sync-items.php';
+$dataFile = __DIR__ . "/global-index.json";
 
 function sendResponse($message, $statuscode): never
 {
@@ -8,10 +8,6 @@ function sendResponse($message, $statuscode): never
     header('Content-Type: application/json');
     echo json_encode(['message' => $message]);
     exit;
-}
-
-if (!file_exists(filename: $indexJsonFile)) {
-    sendResponse("indexed_json.json not found at: " . $indexJsonFile, 500);
 }
 
 if (!file_exists(filename: $dataFile)) {
@@ -22,14 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse("Only GET allowed", 405);
 }
 
-// Sync items (migrates renamed labels, adds new items, removes deleted ones)
-$global_average = syncItems();
-
 header('Content-Type: application/json');
-header('Cache-Control: no-cache, no-store, must-revalidate');
 http_response_code(200);
 
-echo json_encode($global_average);
+echo file_get_contents($dataFile);
 exit;
 
 ?>

@@ -29,9 +29,9 @@ STEP A: Classical Average
 STEP B: Weighted Average (Global Average Base)
   Why weighted? With 1000 existing ratings, a new rating would barely affect
   the classical average. This is unfair to recent raters.
-
+  
   Formula: New = (Previous Average × 0.8) + (New Rating × 0.2)
-
+  
   Previous average (without new rating): (7+8+6+9)÷4 = 7.5
   Calculated average: 7.5 × 0.8 + 8 × 0.2 = 6.0 + 1.6 = 7.6
 
@@ -84,7 +84,7 @@ When an item (e.g., Pizza at 7.6001) receives a new rating:
   1. Old global-average (7.6001) is freed
   2. New average is calculated (e.g., 7.52)
   3. New unique slot is found for 7.52
-
+  
 --------------------------------------------------------------------------------
 5. CONCURRENCY: FILE LOCKING
 --------------------------------------------------------------------------------
@@ -94,7 +94,8 @@ Only one process can write at a time; others wait.
 ================================================================================
 */
 
-require_once __DIR__ . '/sync-items.php';
+$dataFile = __DIR__ . "/global-index.json";
+$indexJsonFile = __DIR__ . "/../item-data/indexed_json.json";
 
 function sendResponse($message, $statuscode): never
 {
@@ -146,7 +147,7 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
 
         // Generate ALL possible candidates for this precision
         $allCandidates = [];
-
+        
         foreach ($bases as $base) {
             // Add base value itself
             $baseCandidate = round($base, $precision);
@@ -218,6 +219,57 @@ function findUniqueAverage(float $targetAverage, array $items, string $currentIm
     return round($targetAverage, 4);
 }
 
+function findAllItems(array $node, array &$data): void
+{
+    foreach ($node as $key => $value) {
+        if ($key === "items" && is_array($value)) {
+            // Found items array - add all image paths (basename only)
+            foreach ($value as $imagePath) {
+                $imageName = basename($imagePath);
+                $data[$imageName] = [
+                    "global-average" => 0.0,
+                    "classical-average" => 0.0,
+                    "deviation" => 0.0,
+                    "current-index" => 0,
+                    "sums" => array(),
+                ];
+            }
+        } elseif (is_array($value)) {
+            // Recurse into nested arrays/objects
+            findAllItems($value, $data);
+        }
+    }
+}
+
+function initializeDataFile(): array
+{
+    global $indexJsonFile;
+
+    $content = file_get_contents($indexJsonFile);
+    if ($content === false) {
+        return [];
+    }
+
+    $indexed_data = json_decode($content, true);
+    $items = [];
+
+    findAllItems($indexed_data, $items);
+
+    $data = [
+        "total-stats" => [
+            "total-item-number" => count($items),
+            "total-rated-item-number" => 0,
+            "total-sum-number" => 0
+        ],
+        "items" => $items
+    ];
+
+    return $data;
+}
+if (!file_exists($dataFile)) {
+    file_put_contents($dataFile, json_encode(initializeDataFile()));
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse("Only POST allowed", 405);
 }
@@ -243,7 +295,30 @@ if (!flock($fileHandle, LOCK_EX)) {
     sendResponse("Could not acquire file lock", 500);
 }
 
-$global_average = syncItems($fileHandle);
+$fileContent = stream_get_contents($fileHandle);
+$global_average = json_decode($fileContent, true);
+
+if (!is_array($global_average) || !isset($global_average['items'])) {
+    $global_average = initializeDataFile();
+}
+
+// Synchronize new items from indexed_json.json
+$current_data = initializeDataFile();
+foreach ($current_data['items'] as $imageName => $defaultData) {
+    if (!isset($global_average['items'][$imageName])) {
+        $global_average['items'][$imageName] = $defaultData;
+    }
+}
+
+// Remove items that no longer exist in indexed_json.json
+foreach ($global_average['items'] as $imageName => $itemData) {
+    if (!isset($current_data['items'][$imageName])) {
+        unset($global_average['items'][$imageName]);
+    }
+}
+
+// Update total-item-number
+$global_average['total-stats']['total-item-number'] = count($global_average['items']);
 
 
 for ($i = 0; $i < count($data); $i++) {
@@ -263,32 +338,12 @@ for ($i = 0; $i < count($data); $i++) {
     $current_index = (int) $current_index; // Ensure it's an integer
     $current_image = $current_item["image"];
 
-    // Look up item: try exact filename first, then fall back to UUID match
     if (!isset($global_average['items'][$current_image])) {
-        $uuid = extractUUID($current_image);
-        $found = false;
-        if ($uuid) {
-            foreach ($global_average['items'] as $imageName => $itemData) {
-                if (extractUUID($imageName) === $uuid) {
-                    $current_image = $imageName;
-                    $found = true;
-                    break;
-                }
-            }
-        }
-        if (!$found) {
-            continue;
-        }
+        continue;
     }
 
     array_push($global_average['items'][$current_image]["sums"], $current_index);
 
-    // Limit sums to the last 100 ratings, remove oldest entries
-    if (count($global_average['items'][$current_image]["sums"]) > 100) {
-        $global_average['items'][$current_image]["sums"] = array_values(
-            array_slice($global_average['items'][$current_image]["sums"], -100)
-        );
-    }
 
     $sums = $global_average['items'][$current_image]["sums"];
     $count = count($sums);
