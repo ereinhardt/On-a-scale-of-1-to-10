@@ -24,12 +24,11 @@ export default class ImagePicker {
     this._pendingDownloads = 0;
   }
 
-  // Extracts the subcategory from an item URL
-  // e.g. "item-data/History/Countries_Tier_List_Maker__edit/abc.png" -> "History/Countries_Tier_List_Maker__edit"
+  // Extracts the main category from an item URL
+  // e.g. "item-data/History/Countries_Tier_List_Maker__edit/abc.png" -> "History"
   getSubcategory(url) {
     const parts = url.replace(/^item-data\//, "").split("/");
-    parts.pop(); // Remove filename
-    return parts.join("/");
+    return parts[0] || "";
   }
 
   isSubcategoryUsed(id) {
