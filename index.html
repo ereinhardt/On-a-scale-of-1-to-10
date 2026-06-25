@@ -20,6 +20,7 @@
       }
     </script>
 
+    <script src="./js/prevent.js" defer></script>
     <script src="./js/debug.js" type="module"></script>
     <script src="./js/camera.js" defer type="module"></script>
     <script src="./js/scene.js" defer type="module"></script>
@@ -97,49 +98,6 @@
 
     <script>
       (function () {
-        document.addEventListener("gesturestart", function (e) {
-          e.preventDefault();
-        });
-
-        document.addEventListener("gesturechange", function (e) {
-          e.preventDefault();
-        });
-
-        document.addEventListener("gestureend", function (e) {
-          e.preventDefault();
-        });
-
-        // Disable keyboard zoom (Ctrl/Cmd +, -, 0)
-        document.addEventListener(
-          "keydown",
-          function (e) {
-            if (
-              (e.ctrlKey || e.metaKey) &&
-              (e.key === "+" ||
-                e.key === "-" ||
-                e.key === "=" ||
-                e.key === "0" ||
-                e.code === "NumpadAdd" ||
-                e.code === "NumpadSubtract" ||
-                e.code === "Numpad0")
-            ) {
-              e.preventDefault();
-            }
-          },
-          { passive: false }
-        );
-
-        // Disable Ctrl/Cmd + wheel zoom
-        document.addEventListener(
-          "wheel",
-          function (e) {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-            }
-          },
-          { passive: false }
-        );
-
         // Global Average Overlay Logic
         const btn = document.getElementById("global-average-btn");
         const overlay = document.getElementById("global-average-overlay");
