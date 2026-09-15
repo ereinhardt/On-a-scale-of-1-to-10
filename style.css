@@ -50,24 +50,6 @@ canvas {
   }
 }
 
-.stats-container {
-  position: absolute;
-  top: var(--item-gap);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10001;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: calc(var(--item-gap) / 2);
-}
-
-.stats-container > div {
-  color: limegreen;
-  font-size: calc(var(--item-size) * var(--main-font-size));
-  text-align: center;
-}
-
 #item-container {
   position: fixed;
   top: calc(var(--item-margin) + var(--safe-top) + var(--item-gap));

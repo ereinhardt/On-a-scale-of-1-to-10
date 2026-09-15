@@ -4,25 +4,197 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>On a scale from 1 to 10 – Settings</title>
+    <style>
+      .setting {
+        border: 1px solid silver;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .setting h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+      }
+
+      .setting > :first-child {
+        margin-top: 0;
+      }
+
+      .setting > :last-child {
+        margin-bottom: 0;
+      }
+
+      #item-box {
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid silver;
+        padding: 8px;
+      }
+
+      #item-box ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
   <body>
     <h1 style="margin-top: 0">On a scale from 1 to 10 – Settings</h1>
 
-    <label>
-      <input type="checkbox" id="stats-toggle" />
-      Show Stats
-    </label>
+    <div class="setting">
+      <h3>Stats:</h3>
+      <div id="user-count">Current users: 0</div>
+      <div id="total-item-number">Total items: 0</div>
+      <div id="total-rated-item-number">Rated items: 0</div>
+      <div id="total-sum-number">Total ratings: 0</div>
+    </div>
+
+    <div class="setting">
+      <h3>Items:</h3>
+      <div id="item-box">
+        <ul id="item-list"></ul>
+      </div>
+    </div>
 
     <script>
-      const toggle = document.getElementById("stats-toggle");
+      (function () {
+        const userCountApi = "./backend/user-count.php";
+        const statsApi = "./backend/send-global-average.php";
 
-      // Load saved setting
-      toggle.checked = localStorage.getItem("showStats") === "true";
+        function updateUserCount() {
+          fetch(userCountApi + "?action=count", { cache: "no-store" })
+            .then((response) => response.json())
+            .then((data) => {
+              document.getElementById("user-count").textContent =
+                "Current users: " + data.count;
+            })
+            .catch(() => {});
+        }
 
-      // Save setting on change
-      toggle.addEventListener("change", function () {
-        localStorage.setItem("showStats", this.checked);
-      });
+        function updateItemStats() {
+          fetch(statsApi, { cache: "no-store" })
+            .then((response) => response.json())
+            .then((data) => {
+              const stats = data["total-stats"];
+              if (!stats) return;
+              document.getElementById("total-item-number").textContent =
+                "Total items: " + stats["total-item-number"];
+              document.getElementById("total-rated-item-number").textContent =
+                "Rated items: " + stats["total-rated-item-number"];
+              document.getElementById("total-sum-number").textContent =
+                "Total ratings: " + stats["total-sum-number"];
+              renderItems(data.items || {});
+            })
+            .catch(() => {});
+        }
+
+        function extractName(fileName) {
+          const label = fileName.split("__").pop();
+          return label.substring(0, label.lastIndexOf(".")).replace(/_/g, " ");
+        }
+
+        // Mirrors the drill-down of ImagePicker.getRandomItem(): every key of a
+        // node and every entry of an items array is equally likely.
+        function collectItemData(node, chance) {
+          if (Array.isArray(node)) {
+            for (const path of node) {
+              const fileName = path.split("/").pop();
+              pickChances[fileName] = chance / node.length;
+              itemPaths[fileName] = path;
+            }
+            return;
+          }
+          if (node && typeof node === "object") {
+            const keys = Object.keys(node);
+            for (const key of keys) {
+              collectItemData(node[key], chance / keys.length);
+            }
+          }
+        }
+
+        function renderItems(items) {
+          const names = Object.keys(items);
+
+          const ranking = names
+            .filter((name) => (items[name]["global-average"] ?? 0) >= 1)
+            .sort(
+              (a, b) =>
+                items[b]["global-average"] - items[a]["global-average"],
+            );
+          const rankByName = new Map(
+            ranking.map((name, index) => [name, index + 1]),
+          );
+
+          const list = document.getElementById("item-list");
+          const box = document.getElementById("item-box");
+          const scrollTop = box.scrollTop;
+          const fragment = document.createDocumentFragment();
+
+          names
+            .sort((a, b) => {
+              const ratingDiff =
+                (items[b].sums?.length ?? 0) - (items[a].sums?.length ?? 0);
+              if (ratingDiff !== 0) return ratingDiff;
+              return (pickChances[b] ?? 0) - (pickChances[a] ?? 0);
+            })
+            .forEach((name) => {
+              const ratings = items[name].sums?.length ?? 0;
+              const rank = rankByName.get(name);
+              const average = items[name]["global-average"] ?? 0;
+              const chance = pickChances[name];
+              const path = itemPaths[name];
+
+              const entry = document.createElement("li");
+              const details =
+                " (" +
+                ratings +
+                " ratings, avg " +
+                (average >= 1 ? average.toFixed(4) : "–") +
+                ", rank " +
+                (rank ?? "–") +
+                ", " +
+                (chance === undefined
+                  ? "–"
+                  : (chance * 100).toFixed(4) + "%") +
+                ")";
+
+              if (path) {
+                const link = document.createElement("a");
+                link.href =
+                  "./backend/gallery.php?item=" + encodeURIComponent(name);
+                link.target = "_blank";
+                link.rel = "noopener";
+                link.textContent = extractName(name);
+                entry.appendChild(link);
+                entry.appendChild(document.createTextNode(details));
+              } else {
+                entry.textContent = extractName(name) + details;
+              }
+
+              fragment.appendChild(entry);
+            });
+
+          list.replaceChildren(fragment);
+          box.scrollTop = scrollTop;
+        }
+
+        const pickChances = {};
+        const itemPaths = {};
+
+        fetch("./item-data/indexed_json.json", { cache: "no-store" })
+          .then((response) => response.json())
+          .then((data) => {
+            collectItemData(data, 1);
+          })
+          .catch(() => {})
+          .finally(() => {
+            updateItemStats();
+            setInterval(updateItemStats, 10000);
+          });
+
+        updateUserCount();
+        setInterval(updateUserCount, 1000);
+      })();
     </script>
   </body>
 </html>
