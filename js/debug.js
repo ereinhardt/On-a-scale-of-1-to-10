@@ -1,5 +1,7 @@
 const MAX_RELOAD_ATTEMPTS = 3;
 const RELOAD_COOLDOWN_MS = 25000;
+// Must outlast the cooldown, otherwise the counter is cleared before the reload runs
+const STABLE_RUNTIME_MS = RELOAD_COOLDOWN_MS + 10000;
 
 // Store reload attempts in sessionStorage
 function getReloadCount() {
@@ -7,8 +9,7 @@ function getReloadCount() {
   if (!data) return 0;
 
   const { count, timestamp } = JSON.parse(data);
-  // Reset if last attempt was more than 30 seconds ago
-  if (Date.now() - timestamp > 30000) return 0;
+  if (Date.now() - timestamp > STABLE_RUNTIME_MS) return 0;
   return count;
 }
 
@@ -27,6 +28,9 @@ function incrementReloadCount() {
 function clearReloadCount() {
   sessionStorage.removeItem("debugReloadData");
 }
+
+let stabilityTimer = null;
+let reloadScheduled = false;
 
 function isFatalError(error) {
   const errorString = error?.message || error?.toString() || "";
@@ -51,6 +55,11 @@ function isFatalError(error) {
 function handleFatalError(error, source) {
   console.error(`Fatal error detected (${source}):`, error);
 
+  if (reloadScheduled) return;
+
+  // The page is no longer considered stable
+  clearTimeout(stabilityTimer);
+
   const reloadCount = getReloadCount();
 
   if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
@@ -64,6 +73,7 @@ function handleFatalError(error, source) {
   const newCount = incrementReloadCount();
   console.log(`Auto-reloading... (Attempt ${newCount}/${MAX_RELOAD_ATTEMPTS})`);
 
+  reloadScheduled = true;
   setTimeout(() => {
     location.reload();
   }, RELOAD_COOLDOWN_MS);
@@ -83,11 +93,9 @@ window.addEventListener("unhandledrejection", (event) => {
   }
 });
 
-// reset reload counter
+// reset reload counter once the page has stayed error-free long enough
 window.addEventListener("load", () => {
-  setTimeout(() => {
-    clearReloadCount();
-  }, 3000);
+  stabilityTimer = setTimeout(clearReloadCount, STABLE_RUNTIME_MS);
 });
 
 // Automatic reload at midnight (00:00) and noon (12:00)

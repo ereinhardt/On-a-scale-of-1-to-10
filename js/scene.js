@@ -33,6 +33,9 @@ export default class Scene {
     this.filterRotY = new OneEuroFilter(minCutoff, beta);
     this.filterRotZ = new OneEuroFilter(minCutoff, beta);
 
+    // Last usable scene Z, kept as fallback when the eye distance is unusable
+    this.lastHeadZ = this.mapDepthMetersToSceneZ(0.8);
+
     this.lastFaceDetectedTime = 0;
 
     // Downscaled canvas for face detection (reduces WASM memory usage)
@@ -720,7 +723,11 @@ export default class Scene {
         const depthMeters = this.computeRealDepthFromEyes(f, rawRotY);
 
         // map to SCENE-Z
-        const headZ = this.mapDepthMetersToSceneZ(depthMeters);
+        const headZ =
+          depthMeters === null
+            ? this.lastHeadZ
+            : this.mapDepthMetersToSceneZ(depthMeters);
+        this.lastHeadZ = headZ;
 
         // Filter Z (Depth)
         const smoothZ = this.filterZ.filter(time, headZ);

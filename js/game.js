@@ -125,7 +125,12 @@ export default class Game {
     // Remember current sequence ID
     const currentSequenceId = ++this.revealSequenceId;
 
-    await this.sendGameData();
+    // A failed upload must not block the reveal
+    try {
+      await this.sendGameData();
+    } catch (err) {
+      console.error(err);
+    }
 
     // Check if this sequence is still valid
     if (this.revealSequenceId !== currentSequenceId) return;
