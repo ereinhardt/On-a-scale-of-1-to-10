@@ -1,6 +1,6 @@
 <?php
 $dataFile = __DIR__ . '/user-data.json';
-$action = $_GET['action'] ?? 'count';
+$action = $_GET['action'] ?? '';
 $userId = $_GET['userId'] ?? null;
 $timeout = 5;
 
@@ -9,7 +9,6 @@ if (!file_exists($dataFile)) {
     file_put_contents($dataFile, json_encode(['users' => []]));
 }
 
-// JSON mode for ping/leave/count
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
@@ -32,4 +31,3 @@ if ($action === 'leave' && $userId) {
 }
 
 echo json_encode(['count' => count($data['users'])]);
-?>

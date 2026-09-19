@@ -28,7 +28,7 @@ function getFilename(path) {
 }
 
 // Performs the reveal animation:
-export async function revealAnimation(board) {
+export async function revealAnimation() {
   const globalAverages = await fetchGlobalAverages();
   if (!globalAverages) {
     return;
@@ -51,7 +51,7 @@ export async function revealAnimation(board) {
     if (i < 9) await delay(SCORE_REVEAL_DELAY);
   }
 
-  if (PAUSE_BEFORE_SORT > 0) await delay(PAUSE_BEFORE_SORT);
+  await delay(PAUSE_BEFORE_SORT);
 
   // Perform sorting with selection sort algorithm
   for (let targetPos = 0; targetPos < 10; targetPos++) {
@@ -66,14 +66,12 @@ export async function revealAnimation(board) {
       const filename = getFilename(src);
       const scoreData = globalAverages[filename]?.["global-average"];
 
-      if (scoreData === undefined || scoreData === null || scoreData < 1) {
+      if (scoreData === undefined || scoreData < 1) {
         continue;
       }
 
-      const score = scoreData;
-
-      if (score < minScore) {
-        minScore = score;
+      if (scoreData < minScore) {
+        minScore = scoreData;
         minPos = i;
       }
     }

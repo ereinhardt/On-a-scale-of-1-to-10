@@ -49,7 +49,7 @@ export default class Scene {
 
     // RENDERER
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0)); // High-DPI support (capped at 1.5 for performance)
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(this.renderer.domElement);
 
@@ -116,7 +116,7 @@ export default class Scene {
 
   async initImagePicker() {
     const urls = await readJsonFile(this.json_path);
-    const queue_length = Math.floor(30);
+    const queue_length = 30;
 
     const imagePicker = new ImagePicker(urls, queue_length);
 
@@ -220,7 +220,6 @@ export default class Scene {
     });
 
     this.video_mesh = new THREE.Mesh(geo, mat);
-    this.video_mesh.scale.set(-1, 1, 1);
     this.video_mesh.layers.set(0);
 
     this.scene.add(this.video_mesh);
@@ -288,7 +287,7 @@ export default class Scene {
     this.perspCam.updateProjectionMatrix();
   }
 
-  // OPTIONAL: Example 3D Object (Layer 1)
+  // 3D OBJECTS (Layer 1)
   async create3DObjects() {
     // Container for the head tracking (Anchor at forehead)
     this.headAnchor = new THREE.Group();
@@ -378,19 +377,21 @@ export default class Scene {
     const h = window.innerHeight;
     const vw = this.video_stream.videoWidth;
     const vh = this.video_stream.videoHeight;
+    const pixelRatio = window.devicePixelRatio;
 
-    // Check if window size OR video size has changed
     if (
       w !== this._lastW ||
       h !== this._lastH ||
       vw !== this._lastVW ||
-      vh !== this._lastVH
+      vh !== this._lastVH ||
+      pixelRatio !== this.renderer.getPixelRatio()
     ) {
       this._lastW = w;
       this._lastH = h;
       this._lastVW = vw;
       this._lastVH = vh;
 
+      this.renderer.setPixelRatio(pixelRatio);
       this.renderer.setSize(w, h);
 
       // ORTHO CAM UPDATES
@@ -425,14 +426,12 @@ export default class Scene {
     const canvasPos = this.videoPixelToCanvasPixel(faceCenterX, faceCenterY);
 
     // Check if face center is within the visible screen area
-    const margin = 0;
-    const inViewport =
-      canvasPos.x >= -margin &&
-      canvasPos.x <= this._screenW + margin &&
-      canvasPos.y >= -margin &&
-      canvasPos.y <= this._screenH + margin;
-
-    return inViewport;
+    return (
+      canvasPos.x >= 0 &&
+      canvasPos.x <= this._screenW &&
+      canvasPos.y >= 0 &&
+      canvasPos.y <= this._screenH
+    );
   }
 
   // map video pixel coords (px,py) -> canvas pixel coords
@@ -504,7 +503,7 @@ export default class Scene {
   }
 
   // Main function: computes depth in meters
-  computeRealDepthFromEyes(f, yaw = 0) {
+  computeRealDepthFromEyes(f, yaw) {
     const vw = this.video_stream.videoWidth;
     const vh = this.video_stream.videoHeight;
     const fov = 65; // typical Webcam-FOV (Short Side)
@@ -572,8 +571,11 @@ export default class Scene {
     return this._labelTex;
   }
   // ANIMATE
-  async animate(time) {
-    if (this._resizeDirty) {
+  animate(time) {
+    if (
+      this._resizeDirty ||
+      window.devicePixelRatio !== this.renderer.getPixelRatio()
+    ) {
       this._resizeDirty = false;
       this.checkResize();
     }
@@ -644,7 +646,7 @@ export default class Scene {
             this._kpCached = true;
           }
           // Periodically recreate detector to reset WASM heap (~every 3 min at ~15 detections/sec)
-          this._detectionCount = (this._detectionCount || 0) + 1;
+          this._detectionCount++;
           if (this._detectionCount >= 2500 && !this._detectorRecreating) {
             this._detectorRecreating = true;
             this.initFaceDetection().then(() => {

@@ -10,7 +10,6 @@ export async function download_image(path) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = path;
-    //img.crossOrigin = "anonymous";
 
     img.onload = () => {
       resolve(img);
@@ -63,28 +62,15 @@ export function repositionField(fields, targetIndex, startIndex) {
   const deltaY = targetRect.top - fieldRect.top;
   field.style.transform = `translateY(${deltaY}px)`;
 
-  // Move down: startIndex < targetIndex
-  if (startIndex < targetIndex) {
-    for (let i = startIndex + 1; i <= targetIndex; i++) {
-      fieldsArray[i].style.transform = `translateY(-${height}px)`;
-    }
-  }
-  // Move up: startIndex > targetIndex
-  else {
-    for (let i = targetIndex; i < startIndex; i++) {
-      fieldsArray[i].style.transform = `translateY(${height}px)`;
-    }
+  for (let i = targetIndex; i < startIndex; i++) {
+    fieldsArray[i].style.transform = `translateY(${height}px)`;
   }
 
   setTimeout(() => {
     fieldsArray.forEach((f) => (f.style.transition = "none"));
 
     parent.removeChild(field);
-    if (startIndex < targetIndex) {
-      parent.insertBefore(field, target.nextSibling);
-    } else {
-      parent.insertBefore(field, target);
-    }
+    parent.insertBefore(field, target);
 
     fieldsArray.forEach((f) => {
       f.style.transform = "none";
@@ -113,7 +99,7 @@ class AnimationQueue {
     this.isRunning = true;
     try {
       await this.queue.shift()();
-    } catch (e) {}
+    } catch {}
     this._processNext();
   }
 }

@@ -34,7 +34,6 @@ function isFatalError(error) {
   // Detect fatal errors that make the game unplayable
   const fatalPatterns = [
     /filter/i,
-    /OneEuroFilter/i,
     /scene/i,
     /detector/i,
     /faceLandmarksDetection/i,
@@ -49,7 +48,7 @@ function isFatalError(error) {
   return fatalPatterns.some((pattern) => pattern.test(errorString));
 }
 
-function handleFatalError(error, source = "unknown") {
+function handleFatalError(error, source) {
   console.error(`Fatal error detected (${source}):`, error);
 
   const reloadCount = getReloadCount();

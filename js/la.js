@@ -4,7 +4,7 @@ export function rotation(p1, p2, p3, p4) {
 
 // OneEuroFilters for scene.js
 export class OneEuroFilter {
-  constructor(minCutoff = 1.0, beta = 0.0) {
+  constructor(minCutoff, beta) {
     this.minCutoff = minCutoff;
     this.beta = beta;
     this.xPrev = null;
@@ -16,7 +16,6 @@ export class OneEuroFilter {
   filter(t, x) {
     if (this.tPrev === null) {
       this.xPrev = x;
-      this.dxPrev = 0;
       this.tPrev = t;
       return x;
     }

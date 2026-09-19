@@ -72,8 +72,6 @@ $fileName = htmlspecialchars('item-data/' . str_replace('**', '1024', $path), EN
       .image-box {
         border: 1px solid silver;
         padding: 1rem;
-        margin-bottom: 1rem;
-        box-sizing: border-box;
       }
 
       .image-box h3 {

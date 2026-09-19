@@ -13,9 +13,8 @@ async function setupCamera() {
     const stream = await navigator.mediaDevices.getUserMedia(CAMERA_OPTIONS);
     const videoElement = document.createElement("video");
     videoElement.srcObject = stream;
-    videoElement.id = "camera-stream";
 
-    // IMPORTANT for iOS/Mobile: Video must play inline and be muted for autoplay
+    // IMPORTANT for iOS/Mobile: Video must play inline for autoplay
     videoElement.setAttribute("playsinline", "");
     videoElement.setAttribute("webkit-playsinline", "");
 
@@ -35,11 +34,7 @@ async function setupCamera() {
             videoTrack.readyState === "ended" ||
             videoElement.paused
           ) {
-            if (
-              videoTrack &&
-              videoTrack.readyState === "live" &&
-              videoElement.paused
-            ) {
+            if (videoTrack && videoTrack.readyState === "live") {
               await videoElement.play();
             } else {
               const newStream =

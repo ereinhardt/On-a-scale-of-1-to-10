@@ -2,9 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=no"
@@ -14,8 +11,7 @@
     <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
+          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js"
         }
       }
     </script>
@@ -23,12 +19,6 @@
     <script src="./js/prevent.js" defer></script>
     <script src="./js/debug.js" type="module"></script>
     <script src="./js/camera.js" defer type="module"></script>
-    <script src="./js/scene.js" defer type="module"></script>
-    <script src="./js/la.js" defer type="module"></script>
-    <script src="./js/util.js" defer type="module"></script>
-    <script src="./js/reveal.js" defer type="module"></script>
-    <script src="./js/game.js" defer type="module"></script>
-    <script src="./js/image_picker.js" defer type="module"></script>
     <script src="./js/global-average-overlay.js" defer type="module"></script>
     <script src="./js/stats.js" defer></script>
     <!-- Require the peer dependencies of face-landmarks-detection. -->
@@ -94,6 +84,9 @@
         // Global Average Overlay Logic
         const btn = document.getElementById("global-average-btn");
         const overlay = document.getElementById("global-average-overlay");
+        const itemsContainer = document.getElementById(
+          "global-average-overlay-items-container",
+        );
         let isOpen = false;
         let inactivityTimer = null;
         const INACTIVITY_TIMEOUT = 60000; // 1 minute in milliseconds
@@ -125,38 +118,32 @@
           }
         }
 
-        // Event listeners for activity (scroll, touch and mouse)
-        overlay.addEventListener("scroll", resetInactivityTimer);
+        // Event listeners for activity (touch, wheel and mouse)
         overlay.addEventListener("touchstart", resetInactivityTimer);
         overlay.addEventListener("touchmove", resetInactivityTimer);
-        overlay.addEventListener("mousemove", resetInactivityTimer);
-        window.addEventListener("scroll", function () {
-          if (isOpen) resetInactivityTimer();
+        overlay.addEventListener("wheel", resetInactivityTimer, {
+          passive: true,
+        });
+        itemsContainer.addEventListener("scroll", resetInactivityTimer, {
+          passive: true,
         });
         window.addEventListener("mousemove", function () {
           if (isOpen) resetInactivityTimer();
         });
 
         btn.addEventListener("click", function () {
-          isOpen = !isOpen;
           if (isOpen) {
-            document.getElementById("item-container").style.display = "none";
-            overlay.style.display = "block";
-            requestAnimationFrame(() => overlay.classList.add("open"));
-            btn.textContent = "× Return to Input";
-            document.getElementById(
-              "global-average-overlay-items-container",
-            ).scrollTop = 0;
-            resetInactivityTimer();
-          } else {
-            document.getElementById("item-container").style.display = "flex";
-            overlay.classList.remove("open");
-            btn.textContent = "⌀ Global Average";
-            clearInactivityTimer();
-            setTimeout(() => {
-              if (!isOpen) overlay.style.display = "none";
-            }, 250);
+            closeOverlay();
+            return;
           }
+
+          isOpen = true;
+          document.getElementById("item-container").style.display = "none";
+          overlay.style.display = "block";
+          requestAnimationFrame(() => overlay.classList.add("open"));
+          btn.textContent = "× Return to Input";
+          itemsContainer.scrollTop = 0;
+          resetInactivityTimer();
         });
       })();
     </script>

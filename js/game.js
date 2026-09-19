@@ -18,7 +18,7 @@ export const GAME_STATE = Object.freeze({
 
 function serializeBoard(board) {
   return board
-    .filter((field) => field && field.image && field.image.image)
+    .filter(Boolean)
     .map((field) => {
       const imagePath = field.image.image.getAttribute("src");
       return {
@@ -125,9 +125,7 @@ export default class Game {
     // Remember current sequence ID
     const currentSequenceId = ++this.revealSequenceId;
 
-    if (this.board.length > 2) {
-      await this.sendGameData();
-    }
+    await this.sendGameData();
 
     // Check if this sequence is still valid
     if (this.revealSequenceId !== currentSequenceId) return;
@@ -142,7 +140,7 @@ export default class Game {
     this.state = GAME_STATE.REVEALING;
     this.updateBodyState();
 
-    await revealAnimation(this.board);
+    await revealAnimation();
 
     // Check if this sequence is still valid
     if (this.revealSequenceId !== currentSequenceId) return;

@@ -12,10 +12,6 @@ export default class ImagePicker {
     this.urls = urls;
     this.queue_length = queue_length;
 
-    if (this.urls.length < this.queue_length) {
-      throw Error("assert: this.urls < this.queue_length");
-    }
-
     this.queue = new Array(this.queue_length).fill(0);
     this.cache = {};
     this.cacheKeys = [];

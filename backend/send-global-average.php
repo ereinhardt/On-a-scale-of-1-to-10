@@ -10,12 +10,12 @@ function sendResponse($message, $statuscode): never
     exit;
 }
 
-if (!file_exists(filename: $dataFile)) {
-    sendResponse("global-index.json not found", 500);
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendResponse("Only GET allowed", 405);
+}
+
+if (!file_exists(filename: $dataFile)) {
+    sendResponse("global-index.json not found", 500);
 }
 
 header('Content-Type: application/json');

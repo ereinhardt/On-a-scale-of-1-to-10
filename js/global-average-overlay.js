@@ -35,11 +35,8 @@ function flattenImages(data) {
 }
 
 function createItemBox(img, score, name, id, fadeIn = false) {
-  // Prevent items with score < 1
-  if (score < 1) return null;
-
   // Prevent duplicate items
-  if (OVERLAY_NODE.querySelector(`[data-id="${id}"]`)) return null;
+  if (OVERLAY_NODE.querySelector(`[data-id="${id}"]`)) return;
 
   const item_box_container = document.createElement("div");
   item_box_container.classList.add("average-item-box-container");
@@ -65,7 +62,7 @@ function createItemBox(img, score, name, id, fadeIn = false) {
   image_element.src = img;
 
   // Retry logic for failed images (retries: 2s, 4s, 8s, 16s, 32s = ~1min total)
-  image_element.addEventListener("error", function retry() {
+  image_element.addEventListener("error", function () {
     const retries = parseInt(this.dataset.retries || "0");
     if (retries < 5) {
       this.dataset.retries = retries + 1;
@@ -111,8 +108,6 @@ function createItemBox(img, score, name, id, fadeIn = false) {
       item_box_container.style.transition = "";
     }, ANIMATION_DURATION_MS);
   }
-
-  return item_box_container;
 }
 
 function ascendingOrderData(data) {
@@ -204,7 +199,7 @@ function sortFieldsByOrder() {
 
 let isRunning = false;
 
-// It can happen that there are so many images that loading takes longer than the interval time (maybe FIXED with try-block?)
+// It can happen that there are so many images that loading takes longer than the interval time
 setInterval(async () => {
   if (isRunning) return;
   isRunning = true;

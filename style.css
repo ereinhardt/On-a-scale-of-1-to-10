@@ -5,7 +5,6 @@ body {
   overflow-x: hidden !important;
   -webkit-user-select: none;
   -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
 }
 
@@ -41,7 +40,6 @@ body {
 canvas {
   width: 100vw;
   height: 100vh;
-  z-index: -40;
 }
 
 @supports (height: 100dvh) {
@@ -54,7 +52,6 @@ canvas {
   position: fixed;
   top: calc(var(--item-margin) + var(--safe-top) + var(--item-gap));
   bottom: calc(var(--item-margin) + var(--safe-bottom) + var(--item-gap));
-  transform: none;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -84,13 +81,7 @@ canvas {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * 0.25);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
   background: rgba(255, 255, 255, 0.7);
-  border: none;
-  color: dimgrey;
 }
 
 .item-box img {
@@ -107,7 +98,6 @@ canvas {
   display: flex;
   position: absolute;
   top: 0;
-  bottom: 0;
   transition:
     right 0.25s ease,
     width 0.25s ease,
@@ -194,7 +184,6 @@ body.state-select-image .item-box {
 /* REVEAL_PAUSE:*/
 body.state-reveal-pause canvas {
   cursor: pointer;
-  pointer-events: auto;
 }
 
 body.state-reveal-pause .item-box {
@@ -205,7 +194,6 @@ body.state-reveal-pause .item-box {
 /* REVEALING: */
 body.state-revealing canvas {
   cursor: pointer;
-  pointer-events: auto;
 }
 
 body.state-revealing .item-box {
@@ -224,7 +212,6 @@ body.state-revealing #item-container {
     var(--item-margin) + var(--safe-bottom) + var(--item-gap)
   );
   box-sizing: border-box;
-  transform: none;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -259,13 +246,7 @@ body.state-revealing #item-container {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--item-size) * var(--main-font-size));
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  /* border-radius: calc(var(--item-size) * 0.1);  If wanted */
   background: white;
-  border: none;
-  color: dimgrey;
   order: 2;
 }
 
