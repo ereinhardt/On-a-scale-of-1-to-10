@@ -39,7 +39,7 @@
     </style>
   </head>
   <body>
-    <h1 style="margin-top: 0">On a scale from 1 to 10 – Settings</h1>
+    <h1 style="margin-top: 0">On a scale from 1 to 10 – Settings</h1><br><br>
 
     <div class="setting">
       <h3>Stats:</h3>
@@ -115,11 +115,12 @@
         function renderItems(items) {
           const names = Object.keys(items);
 
+          // Scale runs 1 to 10 with 1 being the best, so rank 1 is the lowest average.
           const ranking = names
             .filter((name) => (items[name]["global-average"] ?? 0) >= 1)
             .sort(
               (a, b) =>
-                items[b]["global-average"] - items[a]["global-average"],
+                items[a]["global-average"] - items[b]["global-average"],
             );
           const rankByName = new Map(
             ranking.map((name, index) => [name, index + 1]),
@@ -135,6 +136,10 @@
               const ratingDiff =
                 (items[b].sums?.length ?? 0) - (items[a].sums?.length ?? 0);
               if (ratingDiff !== 0) return ratingDiff;
+              const rankDiff =
+                (rankByName.get(a) ?? Infinity) -
+                (rankByName.get(b) ?? Infinity);
+              if (rankDiff !== 0) return rankDiff;
               return (pickChances[b] ?? 0) - (pickChances[a] ?? 0);
             })
             .forEach((name) => {
@@ -148,10 +153,10 @@
               const details =
                 " (" +
                 ratings +
-                " ratings, avg " +
-                (average >= 1 ? average.toFixed(4) : "–") +
-                ", rank " +
+                " ratings, rank " +
                 (rank ?? "–") +
+                ", avg " +
+                (average >= 1 ? average.toFixed(4) : "–") +
                 ", " +
                 (chance === undefined
                   ? "–"
